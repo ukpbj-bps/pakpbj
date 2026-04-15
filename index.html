@@ -12,20 +12,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
-        /* Admin profile selector in sidebar */
-        #profileSelectorWrap {
-            margin: 4px 0 2px 0;
-        }
-        #adminUserSelector {
-            background: var(--bg-card, #f8fafc);
-            color: var(--text-main, #1e293b);
-            border-color: #e2e8f0;
-        }
-        body.dark #adminUserSelector {
-            background: #1e293b;
-            color: #f1f5f9;
-            border-color: #334155;
-        }
         /* Dashboard card dark mode */
         body.dark .card [style*="background:#f8fafc"],
         body.dark .card [style*="background:#faf5ff"],
@@ -33,6 +19,15 @@
         body.dark .card [style*="background:#f0fdf4"],
         body.dark .card [style*="background:#fff7ed"] {
             background: rgba(255,255,255,0.05) !important;
+        }
+        /* Profile selector card dark mode */
+        body.dark #profilePageSelector {
+            background: var(--bg-card, #1e293b) !important;
+        }
+        body.dark #adminProfileSelect {
+            background: #1e293b;
+            color: #f1f5f9;
+            border-color: #334155;
         }
     </style>
 </head>

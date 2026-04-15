@@ -14,10 +14,37 @@ let state = {
     theme: localStorage.getItem('theme') || 'light'
 };
 
-let cachedProfileData = null; // Penyimpanan data agar loading cepat
-let allUsersData = []; // Cache daftar semua user (untuk admin)
+let allUsersData = []; // Cache daftar nama+email semua user (untuk admin)
 let viewingEmail = userData.email; // Email user yang sedang dilihat profilnya
 let viewingName = userData.name;   // Nama user yang sedang dilihat profilnya
+
+// === CACHE SISTEM ===
+// Admin  : multi-key di sessionStorage → { "email@x.com": {...data...}, ... }
+// User   : single key di memori JS saja (tidak perlu sessionStorage)
+const CACHE_KEY = 'profileCache_admin';
+
+function getCachedProfile(email) {
+    if (state.role === 'Admin') {
+        try {
+            const store = JSON.parse(sessionStorage.getItem(CACHE_KEY) || '{}');
+            return store[email] || null;
+        } catch { return null; }
+    } else {
+        return window._userProfileCache || null;
+    }
+}
+
+function setCachedProfile(email, data) {
+    if (state.role === 'Admin') {
+        try {
+            const store = JSON.parse(sessionStorage.getItem(CACHE_KEY) || '{}');
+            store[email] = data;
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify(store));
+        } catch(e) { console.warn('Cache write failed:', e); }
+    } else {
+        window._userProfileCache = data;
+    }
+}
 
 // 3. KAMUS BAHASA (i18n)
 const i18n = {
@@ -94,16 +121,23 @@ function initApp() {
     showPage('dashboard');
     checkSimulationStatus();
 
-    // Pre-fetch Data Profil di Background
-    if (!cachedProfileData) {
-        fetch(`${API_URL}?action=getProfile&email=${viewingEmail}`)
-            .then(res => res.json())
-            .then(result => { 
-                if (result.status === "success") {
-                    cachedProfileData = result.data;
-                    renderDashboardCards(); // Update card setelah data masuk
-                }
-            });
+    if (userData.role === 'Admin') {
+        // Admin (termasuk saat simulasi User): fetch daftar + bulk-cache semua profil di background
+        fetchAllUsersAndBulkCache();
+    } else {
+        // User murni: hanya fetch data diri sendiri
+        if (!getCachedProfile(viewingEmail)) {
+            fetch(`${API_URL}?action=getProfile&email=${viewingEmail}`)
+                .then(res => res.json())
+                .then(result => {
+                    if (result.status === "success") {
+                        setCachedProfile(viewingEmail, result.data);
+                        renderDashboardCards();
+                    }
+                });
+        } else {
+            renderDashboardCards();
+        }
     }
 }
 
@@ -111,15 +145,6 @@ function initApp() {
 function renderSidebar() {
     const menu = document.getElementById('sidebarMenu');
     const isAdmin = state.role === 'Admin';
-    
-    const adminProfileSelector = isAdmin ? `
-        <div class="px-3 pb-2" id="profileSelectorWrap">
-            <label class="small text-muted fw-bold" style="font-size:10px; letter-spacing:0.5px;">LIHAT PROFIL</label>
-            <select id="adminUserSelector" class="form-select form-select-sm mt-1" onchange="adminSwitchUser(this.value)" style="font-size:12px; border-radius:8px;">
-                <option value="">-- Memuat daftar... --</option>
-            </select>
-        </div>
-    ` : '';
 
     menu.innerHTML = `
         <a class="nav-link" id="nav-dashboard" onclick="showPage('dashboard')"><i class="bi bi-house-door-fill"></i> <span>${t('nav_dash')}</span></a>
@@ -129,7 +154,6 @@ function renderSidebar() {
                 <i class="bi bi-person-circle"></i> <span>${t('nav_profile')}</span><i class="bi bi-chevron-down ms-auto small"></i>
             </a>
             <div id="subProfil" class="submenu shadow-sm" style="display:none">
-                ${adminProfileSelector}
                 <a href="javascript:void(0)" id="sub-pak" onclick="loadProfileData('pak')">${t('sub_pak')}</a>
                 <a href="javascript:void(0)" id="sub-training" onclick="loadProfileData('training')">${t('sub_training')}</a>
                 <a href="javascript:void(0)" id="sub-experience" onclick="loadProfileData('experience')">${t('sub_experience')}</a>
@@ -144,86 +168,159 @@ function renderSidebar() {
             <a class="nav-link" id="nav-pengaturan" onclick="showPage('pengaturan')"><i class="bi bi-gear-fill"></i> <span>${t('nav_set')}</span></a>
         ` : ''}
     `;
-
-    // Jika Admin, langsung populate dropdown user
-    if (isAdmin) {
-        populateAdminUserSelector();
-    }
 }
 
-// 6b. ADMIN: POPULATE USER SELECTOR & SWITCH USER
-async function populateAdminUserSelector() {
-    const sel = document.getElementById('adminUserSelector');
-    if (!sel) return;
-
-    // Gunakan cache jika sudah ada
-    if (allUsersData.length > 0) {
-        buildUserSelectorOptions(sel);
-        return;
-    }
-
-    try {
-        const res = await fetch(`${API_URL}?action=getAllUsers`);
-        const result = await res.json();
-        if (result.data && result.data.length > 1) {
-            const headers = result.data[0];
-            const namaIdx = headers.indexOf('Nama');
-            const emailIdx = headers.indexOf('Email');
-            allUsersData = result.data.slice(1).map(r => ({ nama: r[namaIdx], email: r[emailIdx] }));
+// 6b. ADMIN: BULK FETCH SEMUA PROFIL KE SESSIONstorage
+async function fetchAllUsersAndBulkCache() {
+    // Ambil daftar user dulu (untuk dropdown di halaman profil)
+    if (allUsersData.length === 0) {
+        try {
+            const res = await fetch(`${API_URL}?action=getAllUsers`);
+            const result = await res.json();
+            if (result.data && result.data.length > 1) {
+                const h = result.data[0];
+                const namaIdx = h.indexOf('Nama');
+                const emailIdx = h.indexOf('Email');
+                allUsersData = result.data.slice(1).map(r => ({
+                    nama: r[namaIdx], email: r[emailIdx]
+                }));
+            }
+        } catch(e) {
+            console.warn('Gagal fetch daftar user:', e);
+            return;
         }
-    } catch (e) {
-        sel.innerHTML = `<option value="">Gagal memuat</option>`;
+    }
+
+    // Render dashboard cards untuk admin sendiri dulu
+    const selfData = getCachedProfile(userData.email);
+    if (selfData) {
+        renderDashboardCards();
+    }
+
+    // Refresh selector di halaman profil kalau sudah terbuka
+    const sel = document.getElementById('adminProfileSelect');
+    if (sel) {
+        sel.innerHTML = allUsersData.map(u =>
+            `<option value="${u.email}" ${u.email === viewingEmail ? 'selected' : ''}>${u.nama}</option>`
+        ).join('');
+    }
+
+    // Bulk fetch profil semua user secara paralel (yang belum di-cache)
+    const uncached = allUsersData.filter(u => !getCachedProfile(u.email));
+    if (uncached.length === 0) {
+        if (!selfData) renderDashboardCards(); // Fallback jika semua sudah cache
         return;
     }
-    buildUserSelectorOptions(sel);
+
+    // Fetch paralel — semua sekaligus, tidak antri satu-satu
+    const fetches = uncached.map(u =>
+        fetch(`${API_URL}?action=getProfile&email=${u.email}&requester=${userData.email}`)
+            .then(r => r.json())
+            .then(result => {
+                if (result.status === "success") {
+                    setCachedProfile(u.email, result.data);
+                    // Kalau ini adalah data admin sendiri, langsung update dashboard
+                    if (u.email === userData.email) renderDashboardCards();
+                }
+            })
+            .catch(() => {}) // Gagal 1 user tidak menghentikan yang lain
+    );
+
+    await Promise.allSettled(fetches);
+    console.log(`✅ Cache selesai: ${allUsersData.length} profil tersimpan.`);
 }
 
-function buildUserSelectorOptions(sel) {
-    sel.innerHTML = allUsersData.map(u =>
-        `<option value="${u.email}" ${u.email === viewingEmail ? 'selected' : ''}>${u.nama}</option>`
-    ).join('');
+// 6c. RENDER SELECTOR NAMA DI HALAMAN PROFIL (hanya admin/simulasi admin)
+function renderProfileSelectorIfAdmin() {
+    if (userData.role !== 'Admin') return;
+
+    const profileSection = document.getElementById('page-profile');
+    if (!profileSection) return;
+
+    let wrap = document.getElementById('profilePageSelector');
+
+    // Buat wrap kalau belum ada
+    if (!wrap) {
+        wrap = document.createElement('div');
+        wrap.id = 'profilePageSelector';
+        wrap.className = 'mb-4 p-3 card border-0 shadow-sm d-flex flex-row align-items-center gap-3';
+        wrap.style.cssText = 'border-radius:14px; max-width:850px; margin:0 auto 16px auto;';
+        wrap.innerHTML = `
+            <i class="bi bi-person-lines-fill fs-4 text-primary"></i>
+            <div class="flex-grow-1">
+                <label class="form-label small fw-bold mb-1 text-muted" style="letter-spacing:0.5px;">LIHAT PROFIL</label>
+                <select id="adminProfileSelect" class="form-select form-select-sm" style="border-radius:8px;"></select>
+            </div>
+            <button class="btn btn-primary btn-sm fw-bold px-4" style="border-radius:10px; white-space:nowrap;" onclick="adminSwitchUser(document.getElementById('adminProfileSelect').value)">
+                <i class="bi bi-eye-fill me-1"></i> Lihat
+            </button>
+        `;
+        const detailArea = document.getElementById('profileDetailArea');
+        profileSection.insertBefore(wrap, detailArea);
+    }
+
+    // Selalu update options (data mungkin baru selesai di-fetch)
+    const sel = document.getElementById('adminProfileSelect');
+    if (!sel) return;
+    const options = allUsersData.length > 0
+        ? allUsersData.map(u => `<option value="${u.email}" ${u.email === viewingEmail ? 'selected' : ''}>${u.nama}</option>`).join('')
+        : `<option value="${userData.email}" selected>${userData.name}</option>`;
+    sel.innerHTML = options;
 }
 
 function adminSwitchUser(email) {
-    const user = allUsersData.find(u => u.email === email);
-    if (!user) return;
+    if (!email) return;
+    const user = allUsersData.find(u => u.email === email) || { nama: userData.name, email };
     viewingEmail = email;
     viewingName = user.nama;
-    cachedProfileData = null; // Reset cache agar data user baru dimuat ulang
-    
-    // Jika profil sedang ditampilkan, refresh tampilan
-    const profilePage = document.getElementById('page-profile');
-    if (profilePage && profilePage.style.display !== 'none') {
-        // Cek sub menu mana yang aktif
-        const activeSub = document.querySelector('.submenu a.active');
-        const activeType = activeSub ? activeSub.id.replace('sub-', '') : 'pak';
+
+    // Cek sub menu mana yang aktif
+    const activeSub = document.querySelector('.submenu a.active');
+    const activeType = activeSub ? activeSub.id.replace('sub-', '') : 'pak';
+
+    // Jika sudah di-cache → langsung render, 0 loading
+    if (getCachedProfile(email)) {
+        renderProfileUI(activeType);
+    } else {
         loadProfileData(activeType);
     }
 }
-
-// 7. DATA RENDERING (PROFILE)
 async function loadProfileData(type) {
     showPage('profile');
     const area = document.getElementById('profileDetailArea');
     
-    // UI Feedback
+    // UI Feedback — tandai submenu aktif
     document.querySelectorAll('.submenu a').forEach(a => a.classList.remove('active'));
     document.getElementById(`sub-${type}`)?.classList.add('active');
     document.getElementById('nav-profile').classList.add('active');
 
-    if (!cachedProfileData) {
+    // Render selector di atas (hanya admin) — inject jika belum ada
+    renderProfileSelectorIfAdmin();
+
+    const cached = getCachedProfile(viewingEmail);
+    if (!cached) {
         area.innerHTML = `<div class="p-5 text-center"><div class="spinner-border text-primary"></div><p class="mt-2">${t('loading')}</p></div>`;
-        const res = await fetch(`${API_URL}?action=getProfile&email=${viewingEmail}`);
-        const result = await res.json();
-        if (result.status === "success") cachedProfileData = result.data;
-        else { area.innerHTML = `<div class="alert alert-warning">Data tidak ditemukan.</div>`; return; }
+        try {
+            const res = await fetch(`${API_URL}?action=getProfile&email=${viewingEmail}&requester=${userData.email}`);
+            const result = await res.json();
+            if (result.status === "success") {
+                setCachedProfile(viewingEmail, result.data);
+            } else {
+                area.innerHTML = `<div class="alert alert-warning">Data tidak ditemukan.</div>`;
+                return;
+            }
+        } catch(e) {
+            area.innerHTML = `<div class="alert alert-danger">Koneksi gagal.</div>`;
+            return;
+        }
     }
     renderProfileUI(type);
 }
 
 function renderProfileUI(type) {
     const area = document.getElementById('profileDetailArea');
-    const specificData = cachedProfileData[type]; 
+    const profileData = getCachedProfile(viewingEmail);
+    const specificData = profileData ? profileData[type] : null;
     const d = (specificData && specificData.values) ? specificData.values : [];
     const fieldsToShow = customProfileFields[type] || [];
 
@@ -327,17 +424,7 @@ function setupEntryForm() {
 }
 
 // 9. SIDEBAR TOGGLE & CORE UTILS
-function handleSidebarToggle() {
-    const body = document.body;
-    if (window.innerWidth < 992) {
-        body.classList.toggle('sidebar-open');
-    } else {
-        body.classList.toggle('collapsed-sidebar');
-        const isCollapsed = body.classList.contains('collapsed-sidebar');
-        localStorage.setItem('sidebarCollapsed', isCollapsed);
-        updateToggleIcon(isCollapsed);
-    }
-}
+function handleSidebarToggle() { const b = document.body; if (window.innerWidth < 992) b.classList.toggle('sidebar-open'); else { b.classList.toggle('collapsed-sidebar'); localStorage.setItem('sidebarCollapsed', b.classList.contains('collapsed-sidebar')); } }
 
 function updateToggleIcon(isCollapsed) {
     const icon = document.querySelector('.btn-toggle-custom i');
@@ -371,58 +458,61 @@ function toggleSub(id) {
     el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
-function applyTheme() { document.body.classList.toggle('dark', state.theme === 'dark'); }
-function toggleTheme() { 
-    state.theme = state.theme === 'light' ? 'dark' : 'light'; 
-    localStorage.setItem('theme', state.theme); 
-    applyTheme(); 
-}
+function applyTheme() { document.body.classList.toggle('dark', state.theme === 'dark'); document.querySelector('#themeBtn i').className = state.theme === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars'; }
+function toggleTheme() { state.theme = state.theme === 'light' ? 'dark' : 'light'; localStorage.setItem('theme', state.theme); applyTheme(); }
 function changeLang(v) { localStorage.setItem('lang', v); location.reload(); }
 function logout() { sessionStorage.clear(); window.location.href = 'login.html'; }
 function saveAdminSettings() { sessionStorage.setItem('activeRole', document.getElementById('roleSelect').value); location.reload(); }
 
+// 9. SIMULATION BUTTON (BACK TO ADMIN)
 function checkSimulationStatus() {
     const btnBack = document.getElementById('btnBackToAdmin');
-    if (userData.role === 'Admin' && state.role === 'User') btnBack.style.display = 'inline-block';
-    else if (btnBack) btnBack.style.display = 'none';
+    // Jika User Login aslinya Admin, tapi sedang menyamar jadi User
+    if (userData.role === 'Admin' && state.role === 'User') {
+        if(btnBack) btnBack.style.display = 'inline-block';
+    } else {
+        if(btnBack) btnBack.style.display = 'none';
+    }
 }
-function backToAdmin() { sessionStorage.setItem('activeRole', 'Admin'); location.reload(); }
+
+function backToAdmin() {
+    sessionStorage.setItem('activeRole', 'Admin');
+    location.reload();
+}
 
 async function fetchUsersToTable() {
     const tbody = document.getElementById('userTableBody');
     if (!tbody) return;
     try {
-        const res = await fetch(`${API_URL}?action=getAllUsers`);
+        const res = await fetch(`${API_URL}?action=getAllUsers&email=${userData.email}`);
         const result = await res.json();
         const h = result.data[0];
         tbody.innerHTML = result.data.slice(1).map(r => `<tr><td><b>${r[h.indexOf('Nama')]}</b></td><td>${r[h.indexOf('Email')]}</td><td><span class="badge-role ${r[h.indexOf('Role')] === 'Admin' ? 'admin-pill' : 'user-pill'}">${r[h.indexOf('Role')]}</span></td></tr>`).join('');
     } catch (e) { }
 }
 
-// DASHBOARD CARDS — isi dari cachedProfileData jika tersedia
-function renderDashboardCards() {
-    // Mapping field indices (sesuaikan dengan kolom Google Sheet Anda)
-    // Contoh mapping — update idx sesuai kolom aktual di sheet
-    const dashFields = {
-        'dash-ak-pengangkatan':  { sheet: 'pak', idx: 30 },
-        'dash-ak-dasar':         { sheet: 'pak', idx: 31 },
-        'dash-ak-dupak':         { sheet: 'pak', idx: 32 },
-        'dash-ak-integrasi':     { sheet: 'pak', idx: 33 },
-        'dash-predikat-2023':    { sheet: 'pak', idx: 34 },
-        'dash-konversi-2023':    { sheet: 'pak', idx: 35 },
-        'dash-predikat-2024':    { sheet: 'pak', idx: 36 },
-        'dash-akumulasi-2024':   { sheet: 'pak', idx: 37 },
-        'dash-predikat-2025':    { sheet: 'pak', idx: 38 },
-        'dash-akumulasi-2025':   { sheet: 'pak', idx: 39 },
-        'dash-predikat-2026':    { sheet: 'pak', idx: 40 },
-        'dash-akumulasi-2026':   { sheet: 'pak', idx: 41 },
-    };
 
-    for (const [elId, cfg] of Object.entries(dashFields)) {
+// DASHBOARD CARDS — isi dari cache profil jika tersedia
+function renderDashboardCards() {
+    const profileData = getCachedProfile(userData.email);
+    if (!profileData) return;
+    const d = profileData.pak.values;
+    const dashFields = { 
+        'dash-ak-pengangkatan': 24, 
+        'dash-ak-dasar': 25, 
+        'dash-ak-dupak': 26, 
+        'dash-ak-integrasi': 27, 
+        'dash-predikat-2023': 30, 
+        'dash-konversi-2023': 33, 
+        'dash-predikat-2024': 39, 
+        'dash-akumulasi-2024': 40, 
+        'dash-predikat-2025': 43, 
+        'dash-akumulasi-2025': 46, 
+        'dash-predikat-2026': 50, 
+        'dash-akumulasi-2026': 54 };
+    for (const [elId, idx] of Object.entries(dashFields)) {
         const el = document.getElementById(elId);
-        if (!el) continue;
-        const val = cachedProfileData?.[cfg.sheet]?.values?.[cfg.idx];
-        el.textContent = (val !== undefined && val !== null && val !== '') ? val : '—';
+        if (el) el.textContent = d[idx] || '—';
     }
 }
 
@@ -447,20 +537,17 @@ async function autoFillUsulanForm() {
 
     if (inputNama) inputNama.value = userData.name;
 
-    // Cek apakah data profil sudah ada di memori (cache)
-    if (cachedProfileData && cachedProfileData.pak && cachedProfileData.pak.values) {
-        // Berdasarkan mapping Anda: NIP ada di Index 3
-        const nipVal = cachedProfileData.pak.values[3];
+    const cached = getCachedProfile(userData.email);
+    if (cached && cached.pak && cached.pak.values) {
+        const nipVal = cached.pak.values[3];
         if (inputNip) inputNip.value = nipVal || "";
     } else {
-        // Jika belum ada di cache (misal user baru login langsung ke menu usulan)
-        // Kita tarik datanya secara manual
         try {
             const res = await fetch(`${API_URL}?action=getProfile&email=${userData.email}`);
             const result = await res.json();
             if (result.status === "success") {
-                cachedProfileData = result.data;
-                const nipVal = cachedProfileData.pak.values[3];
+                setCachedProfile(userData.email, result.data);
+                const nipVal = result.data.pak.values[3];
                 if (inputNip) inputNip.value = nipVal || "";
             }
         } catch (e) {
