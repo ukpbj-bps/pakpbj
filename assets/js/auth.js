@@ -1,6 +1,6 @@
 // CONFIGURATION
 const GOOGLE_CLIENT_ID = "545994110940-n5dm8uc1beho1pn26giphg9b7ij3r7tl.apps.googleusercontent.com"; 
-const API_URL = "https://script.google.com/macros/s/AKfycbzW9eAFvZ-WFMPO7qXdPrYqtM6k3d79h_wKpalLI1c8AGPm1P0UTMsSpqHMlsNWa8Qu/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyBlSWBI_vbQ1B6EWjrqfnPtHZzyD5pvCQNJOQUEUXgPmLg-d0rXr2xHbV8mx5PY5vN/exec";
 
 
 // Load Google Sign-In button

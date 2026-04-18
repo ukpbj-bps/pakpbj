@@ -1,28 +1,30 @@
 /**
  * SCRIPT.JS - PROYEK PAK PBJ BPS 2026
- * Fitur: Security API, Multi-language, Theme Support, GForm Style Entry
+ * Versi: Clean & Fixed
  */
 
-// 1. DATA PENGGUNA & KONFIGURASI API
+// ==========================================
+// 1. KONFIGURASI & DATA PENGGUNA
+// ==========================================
 const userData = JSON.parse(sessionStorage.getItem('userData')) || { role: 'User', name: 'Guest', email: '', picture: '' };
-const API_URL = "https://script.google.com/macros/s/AKfycbysA8l0_2ooZ2DxYdvmOQH9W2MvfuqvynPI_ExvaE6RtMXbU3NPdKuTrQUdrhaqxu8u/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyXr6UivqYsL-koCiHAuC_wJk1sHioB69h_ElL-ycmHncXJuWOdhAn1vC1iyNzZVq-g/exec";
 
-// 2. STATE APLIKASI
 let state = {
     role: sessionStorage.getItem('activeRole') || userData.role,
     lang: localStorage.getItem('lang') || 'id',
-    theme: localStorage.getItem('theme') || 'light'
+    theme: localStorage.getItem('theme') || 'light',
+    unitKerja: ''
 };
 
-let allUsersData = []; // Cache daftar nama+email semua user (untuk admin)
-let viewingEmail = userData.email; // Email user yang sedang dilihat profilnya
-let viewingName = userData.name;   // Nama user yang sedang dilihat profilnya
+let allUsersData = []; 
+let viewingEmail = userData.email; 
+let viewingName = userData.name;   
 
-// === CACHE SISTEM ===
-// Admin  : multi-key di sessionStorage → { "email@x.com": {...data...}, ... }
-// User   : single key di memori JS saja (tidak perlu sessionStorage)
 const CACHE_KEY = 'profileCache_admin';
 
+// ==========================================
+// 2. UTILS & CACHE SYSTEM
+// ==========================================
 function getCachedProfile(email) {
     if (state.role === 'Admin') {
         try {
@@ -46,7 +48,6 @@ function setCachedProfile(email, data) {
     }
 }
 
-// 3. KAMUS BAHASA (i18n)
 const i18n = {
     id: { 
         nav_dash: "Beranda", nav_profile: "Profil", nav_analitik: "Analitik", nav_pengguna: "Pengguna", nav_set: "Pengaturan", nav_entry: "Usulan AK",
@@ -62,48 +63,64 @@ const i18n = {
 
 const t = (k) => i18n[state.lang][k] || k;
 
-// 4. KONFIGURASI KOLOM GOOGLE SHEET (Mapping Index)
+const formatTanggal = (val) => {
+    if (!val || val === '-' || val === '') return '-';
+    const isDate = typeof val === 'string' && (val.includes('T') || val.includes(':')) && !isNaN(Date.parse(val));
+    if (isDate) {
+        return new Date(val).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    return val;
+};
+
+// ==========================================
+// 3. KONFIGURASI KOLOM (MAPPING)
+// ==========================================
 const customProfileFields = {
     pak: [
-        { idx: 1, label: "Nama Lengkap" },
-        { idx: 3, label: "NIP" },
-        { idx: 4, label: "Nomor Karpeg" },
-        { idx: 5, label: "Golongan" },
-        { idx: 6, label: "Pangkat" },
-        { idx: 12, label: "Unit Kerja"},
-        { idx: 13, label: "Jabatan Fungsional" },
-        { idx: 14, label: "Status" },
-        { idx: 19, label: "Pengangkatan" },
-        { idx: 20, label: "Tahun PJL / Penerimaan" },
-        { idx: 21, label: "TMT Jabatan" },
-        { idx: 22, label: "Tanggal Pelantikan" }
+        { idx: 1, label: "Nama Lengkap" }, { idx: 2, label: "NIP" }, { idx: 3, label: "Nomor Karpeg" },
+        { idx: 4, label: "Golongan" }, { idx: 5, label: "Pangkat" }, { idx: 11, label: "Unit Kerja"},
+        { idx: 12, label: "Jabatan Fungsional" }, { idx: 13, label: "Status" }, { idx: 18, label: "Pengangkatan" },
+        { idx: 19, label: "Tahun PJL / Penerimaan" }, { idx: 20, label: "TMT Jabatan" }, { idx: 21, label: "Tanggal Pelantikan" }
     ],
     training: [
-        { section: "Penjenjangan Pertama", fields: [{ idx: 23, label: "Pelatihan" }, { idx: 24, label: "Hasil" }] },
-        { section: "Penjenjangan Muda", fields: [{ idx: 25, label: "Pelatihan" }, { idx: 26, label: "Ujikom" }, { idx: 27, label: "Hasil" }] },
-        { section: "Penjenjangan Madya", fields: [{ idx: 28, label: "Pelatihan" }, { idx: 29, label: "Ujikom" }, { idx: 30, label: "Hasil" }] }
+        { section: "Penjenjangan Pertama", fields: [{ idx: 2, label: "Pelatihan" }, { idx: 3, label: "Hasil" }] },
+        { section: "Penjenjangan Muda", fields: [{ idx: 4, label: "Pelatihan" }, { idx: 5, label: "Ujikom" }, { idx: 6, label: "Hasil" }] },
+        { section: "Penjenjangan Madya", fields: [{ idx: 7, label: "Pelatihan" }, { idx: 7, label: "Ujikom" }, { idx: 9, label: "Hasil" }] }
     ],
     experience: [
-        { section: "Paket Konstruksi 2022-2024", fields: [{ idx: 23, label: "Seleksi" }, { idx: 24, label: "Tender" }, { idx: 25, label: "Pendampingan" }] },
-        { section: "Portofolio", fields: [{ idx: 26, label: "Portofolio Madya JK" }] }
+        { section: "Paket Konstruksi 2022-2024", fields: [{ idx: 2, label: "Seleksi" }, { idx: 3, label: "Tender" }, { idx: 4, label: "Pendampingan" }] },
+        { section: "Portofolio", fields: [{ idx: 5, label: "Portofolio Madya JK Tertentu" }] }
     ]
 };
 
-// 5. INISIALISASI SAAT START
+// ==========================================
+// 4. CORE APP LOGIC
+// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Cek Sidebar Collapsed State
     const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
     if (isCollapsed && window.innerWidth >= 992) {
         document.body.classList.add('collapsed-sidebar');
         updateToggleIcon(true);
     }
-
     initApp();
     setupEntryForm();
 });
 
-function initApp() {
+async function initApp() { // Tambahkan async
     applyTheme();
+    
+    // 1. Load data user dulu (tunggu sampai selesai)
+    if (state.role === 'Admin') {
+        // Jika admin, kita juga perlu ambil data unit kerjanya sendiri untuk pengecekan menu
+        // Kita panggil loadUserDataSelf agar state.unitKerja terisi
+        await loadUserDataSelf(); 
+        fetchAllUsersAndBulkCache();
+    } else {
+        // Jika user, tunggu data dirinya selesai di-load
+        await loadUserDataSelf();
+    }
+
+    // 2. Setelah data user (termasuk unit kerja) didapat, BARU render sidebar
     renderSidebar();
     
     document.getElementById('welcomeText').innerText = `${t('welcome')}, ${userData.name}! 👋`;
@@ -112,6 +129,7 @@ function initApp() {
     document.getElementById('langTop').value = state.lang;
     
     if (userData.picture) document.getElementById('userPic').src = userData.picture;
+    
     if (state.role === 'Admin') {
         const rs = document.getElementById('roleSelect');
         if(rs) rs.value = state.role;
@@ -120,31 +138,35 @@ function initApp() {
     
     showPage('dashboard');
     checkSimulationStatus();
+}
 
-    if (userData.role === 'Admin') {
-        // Admin (termasuk saat simulasi User): fetch daftar + bulk-cache semua profil di background
-        fetchAllUsersAndBulkCache();
+async function loadUserDataSelf() {
+    if (!getCachedProfile(viewingEmail)) {
+        try {
+            const res = await fetch(`${API_URL}?action=getProfile&email=${viewingEmail}`);
+            const result = await res.json();
+            if (result.status === "success") {
+                setCachedProfile(viewingEmail, result.data);
+                state.unitKerja = result.data.userData.values[4] || '';
+                renderDashboardCards();
+            }
+        } catch (e) { console.error("Failed to load self profile", e); }
     } else {
-        // User murni: hanya fetch data diri sendiri
-        if (!getCachedProfile(viewingEmail)) {
-            fetch(`${API_URL}?action=getProfile&email=${viewingEmail}`)
-                .then(res => res.json())
-                .then(result => {
-                    if (result.status === "success") {
-                        setCachedProfile(viewingEmail, result.data);
-                        renderDashboardCards();
-                    }
-                });
-        } else {
-            renderDashboardCards();
-        }
+        const cached = getCachedProfile(viewingEmail);
+    if (cached?.userData?.values) state.unitKerja = cached.userData.values[4] || '';
+        renderDashboardCards();
     }
 }
 
-// 6. SIDEBAR & NAVIGATION
+// ==========================================
+// 5. NAVIGATION & SIDEBAR
+// ==========================================
 function renderSidebar() {
     const menu = document.getElementById('sidebarMenu');
     const isAdmin = state.role === 'Admin';
+    
+    // SYARAT: Menu Usulan AK hanya muncul jika dia Admin ATAU Unit Kerjanya adalah 'UKPBJ'
+    const canSeeUsulan = isAdmin || state.unitKerja === 'UKPBJ';
 
     menu.innerHTML = `
         <a class="nav-link" id="nav-dashboard" onclick="showPage('dashboard')"><i class="bi bi-house-door-fill"></i> <span>${t('nav_dash')}</span></a>
@@ -160,19 +182,37 @@ function renderSidebar() {
             </div>
         </div>
 
-        <a class="nav-link" id="nav-entry" onclick="showPage('entry')"><i class="bi bi-plus-circle-fill"></i> <span>${t('nav_entry')}</span></a>
+        ${canSeeUsulan ? `
+            <a class="nav-link" id="nav-entry" onclick="showPage('entry')"><i class="bi bi-plus-circle-fill"></i> <span>${t('nav_entry')}</span></a>
+        ` : ''}
 
         ${isAdmin ? `
             <a class="nav-link" id="nav-analitik" onclick="showAnalitikDev()"><i class="bi bi-bar-chart-fill"></i> <span>${t('nav_analitik')}</span></a>
             <a class="nav-link" id="nav-pengguna" onclick="showPage('pengguna')"><i class="bi bi-people-fill"></i> <span>${t('nav_pengguna')}</span></a>
-            <a class="nav-link" id="nav-pengaturan" onclick="showPage('pengaturan')"><i class="bi bi-gear-fill"></i> <span>${t('nav_set')}</span></a>
+            <a class="nav-link" id="nav_pengaturan" onclick="showPage('pengaturan')"><i class="bi bi-gear-fill"></i> <span>${t('nav_set')}</span></a>
         ` : ''}
     `;
 }
+function showPage(id) {
+    document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
+    const target = document.getElementById(`page-${id}`);
+    if(target) target.style.display = 'block';
 
-// 6b. ADMIN: BULK FETCH SEMUA PROFIL KE SESSIONstorage
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    const activeNav = document.getElementById(`nav-${id}`);
+    if(activeNav) activeNav.classList.add('active');
+
+    if (id === 'entry') autoFillUsulanForm();
+    if (id === 'dashboard') {renderDashboardCards();}
+    if(window.innerWidth < 992) document.body.classList.remove('sidebar-open');
+}
+
+// ==========================================
+// 6. ADMIN & PROFILE LOGIC
+// ==========================================
 async function fetchAllUsersAndBulkCache() {
-    // Ambil daftar user dulu (untuk dropdown di halaman profil)
+    // Kita tetap melakukan fetch background untuk kecepatan (cache), 
+    // tapi kita tidak perlu lagi mengupdate dropdown UI.
     if (allUsersData.length === 0) {
         try {
             const res = await fetch(`${API_URL}?action=getAllUsers`);
@@ -185,61 +225,37 @@ async function fetchAllUsersAndBulkCache() {
                     nama: r[namaIdx], email: r[emailIdx]
                 }));
             }
-        } catch(e) {
-            console.warn('Gagal fetch daftar user:', e);
-            return;
-        }
+        } catch(e) { return; }
     }
 
-    // Render dashboard cards untuk admin sendiri dulu
-    const selfData = getCachedProfile(userData.email);
-    if (selfData) {
-        renderDashboardCards();
-    }
-
-    // Refresh selector di halaman profil kalau sudah terbuka
-    const sel = document.getElementById('adminProfileSelect');
-    if (sel) {
-        sel.innerHTML = allUsersData.map(u =>
-            `<option value="${u.email}" ${u.email === viewingEmail ? 'selected' : ''}>${u.nama}</option>`
-        ).join('');
-    }
-
-    // Bulk fetch profil semua user secara paralel (yang belum di-cache)
     const uncached = allUsersData.filter(u => !getCachedProfile(u.email));
-    if (uncached.length === 0) {
-        if (!selfData) renderDashboardCards(); // Fallback jika semua sudah cache
-        return;
+    if (uncached.length > 0) {
+        const fetches = uncached.map(u =>
+            fetch(`${API_URL}?action=getProfile&email=${u.email}&requester=${userData.email}`)
+                .then(r => r.json())
+                .then(result => {
+                    if (result.status === "success") setCachedProfile(u.email, result.data);
+                }).catch(() => {})
+        );
+        await Promise.allSettled(fetches);
     }
-
-    // Fetch paralel — semua sekaligus, tidak antri satu-satu
-    const fetches = uncached.map(u =>
-        fetch(`${API_URL}?action=getProfile&email=${u.email}&requester=${userData.email}`)
-            .then(r => r.json())
-            .then(result => {
-                if (result.status === "success") {
-                    setCachedProfile(u.email, result.data);
-                    // Kalau ini adalah data admin sendiri, langsung update dashboard
-                    if (u.email === userData.email) renderDashboardCards();
-                }
-            })
-            .catch(() => {}) // Gagal 1 user tidak menghentikan yang lain
-    );
-
-    await Promise.allSettled(fetches);
-    console.log(`✅ Cache selesai: ${allUsersData.length} profil tersimpan.`);
+    renderDashboardCards();
 }
 
-// 6c. RENDER SELECTOR NAMA DI HALAMAN PROFIL (hanya admin/simulasi admin)
 function renderProfileSelectorIfAdmin() {
-    if (userData.role !== 'Admin') return;
+    // 1. Cek apakah role aktif saat ini adalah Admin
+    // Jika Anda sedang simulasi jadi User, fungsi ini akan berhenti di sini (sesuai permintaan Anda)
+    if (state.role !== 'Admin') {
+        console.log("Selector disembunyikan karena role bukan Admin.");
+        return;
+    }
 
     const profileSection = document.getElementById('page-profile');
     if (!profileSection) return;
 
     let wrap = document.getElementById('profilePageSelector');
 
-    // Buat wrap kalau belum ada
+    // 2. Jika wrapper belum ada di DOM, buat baru
     if (!wrap) {
         wrap = document.createElement('div');
         wrap.id = 'profilePageSelector';
@@ -248,7 +264,7 @@ function renderProfileSelectorIfAdmin() {
         wrap.innerHTML = `
             <i class="bi bi-person-lines-fill fs-4 text-primary"></i>
             <div class="flex-grow-1">
-                <label class="form-label small fw-bold mb-1 text-muted" style="letter-spacing:0.5px;">LIHAT PROFIL</label>
+                <label class="form-label small fw-bold mb-1 text-muted" style="letter-spacing:0.5px;">LIHAT PROFIL USER</label>
                 <select id="adminProfileSelect" class="form-select form-select-sm" style="border-radius:8px;"></select>
             </div>
             <button class="btn btn-primary btn-sm fw-bold px-4" style="border-radius:10px; white-space:nowrap;" onclick="adminSwitchUser(document.getElementById('adminProfileSelect').value)">
@@ -256,46 +272,32 @@ function renderProfileSelectorIfAdmin() {
             </button>
         `;
         const detailArea = document.getElementById('profileDetailArea');
-        profileSection.insertBefore(wrap, detailArea);
+        if (detailArea) {
+            profileSection.insertBefore(wrap, detailArea);
+        }
     }
 
-    // Selalu update options (data mungkin baru selesai di-fetch)
+    // 3. Update isi dropdown (Options)
     const sel = document.getElementById('adminProfileSelect');
     if (!sel) return;
-    const options = allUsersData.length > 0
-        ? allUsersData.map(u => `<option value="${u.email}" ${u.email === viewingEmail ? 'selected' : ''}>${u.nama}</option>`).join('')
-        : `<option value="${userData.email}" selected>${userData.name}</option>`;
-    sel.innerHTML = options;
-}
 
-function adminSwitchUser(email) {
-    if (!email) return;
-    const user = allUsersData.find(u => u.email === email) || { nama: userData.name, email };
-    viewingEmail = email;
-    viewingName = user.nama;
-
-    // Cek sub menu mana yang aktif
-    const activeSub = document.querySelector('.submenu a.active');
-    const activeType = activeSub ? activeSub.id.replace('sub-', '') : 'pak';
-
-    // Jika sudah di-cache → langsung render, 0 loading
-    if (getCachedProfile(email)) {
-        renderProfileUI(activeType);
+    if (allUsersData.length > 0) {
+        // Jika data user sudah ada
+        sel.innerHTML = allUsersData.map(u => 
+            `<option value="${u.email}" ${u.email === viewingEmail ? 'selected' : ''}>${u.nama}</option>`
+        ).join('');
     } else {
-        loadProfileData(activeType);
+        // Jika data user belum selesai di-fetch, tampilkan loading/nama sendiri
+        sel.innerHTML = `<option value="${userData.email}" selected>Memuat daftar user...</option>`;
     }
 }
+
 async function loadProfileData(type) {
     showPage('profile');
     const area = document.getElementById('profileDetailArea');
-    
-    // UI Feedback — tandai submenu aktif
     document.querySelectorAll('.submenu a').forEach(a => a.classList.remove('active'));
     document.getElementById(`sub-${type}`)?.classList.add('active');
     document.getElementById('nav-profile').classList.add('active');
-
-    // Render selector di atas (hanya admin) — inject jika belum ada
-    renderProfileSelectorIfAdmin();
 
     const cached = getCachedProfile(viewingEmail);
     if (!cached) {
@@ -303,16 +305,9 @@ async function loadProfileData(type) {
         try {
             const res = await fetch(`${API_URL}?action=getProfile&email=${viewingEmail}&requester=${userData.email}`);
             const result = await res.json();
-            if (result.status === "success") {
-                setCachedProfile(viewingEmail, result.data);
-            } else {
-                area.innerHTML = `<div class="alert alert-warning">Data tidak ditemukan.</div>`;
-                return;
-            }
-        } catch(e) {
-            area.innerHTML = `<div class="alert alert-danger">Koneksi gagal.</div>`;
-            return;
-        }
+            if (result.status === "success") setCachedProfile(viewingEmail, result.data);
+            else { area.innerHTML = `<div class="alert alert-warning">Data tidak ditemukan.</div>`; return; }
+        } catch(e) { area.innerHTML = `<div class="alert alert-danger">Koneksi gagal.</div>`; return; }
     }
     renderProfileUI(type);
 }
@@ -349,40 +344,27 @@ function renderProfileUI(type) {
 }
 
 function renderRow(label, value) {
-    // Fungsi pembantu untuk mengubah format tanggal di dalam baris
-    const formatTanggal = (val) => {
-        if (!val || val === '-') return '-';
-
-        // Deteksi apakah value adalah format tanggal ISO (seperti 2023-11-26T17:00...)
-        const isDate = typeof val === 'string' && val.includes('T') && val.includes(':') && !isNaN(Date.parse(val));
-
-        if (isDate) {
-            const d = new Date(val);
-            // Menggunakan format Indonesia (dd MMMM yyyy)
-            return d.toLocaleDateString('id-ID', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-            });
-        }
-        return val; // Kembalikan nilai asli jika bukan tanggal
-    };
-
-    const cleanValue = formatTanggal(value);
-
     return `<div class="list-group-item p-3 border-light border-0 border-bottom">
                 <div class="row align-items-center">
-                    <div class="col-5 text-muted fw-bold text-uppercase" style="font-size:13px; letter-spacing: 0.5px;">
-                        ${label}
-                    </div>
-                    <div class="col-7 fw-bold" style="font-size:15px; color: var(--text-main)!important;">
-                        ${cleanValue}
-                    </div>
+                    <div class="col-5 text-muted fw-bold text-uppercase" style="font-size:13px; letter-spacing: 0.5px;">${label}</div>
+                    <div class="col-7 fw-bold" style="font-size:15px; color: var(--text-main)!important;">${formatTanggal(value)}</div>
                 </div>
             </div>`;
 }
 
-// 8. FORM USULAN AK LOGIC
+function adminSwitchUser(email) {
+    if (!email) return;
+    const user = allUsersData.find(u => u.email === email) || { nama: userData.name, email };
+    viewingEmail = email;
+    viewingName = user.nama;
+    const activeSub = document.querySelector('.submenu a.active');
+    const activeType = activeSub ? activeSub.id.replace('sub-', '') : 'pak';
+    loadProfileData(activeType);
+}
+
+// ==========================================
+// 7. ENTRY FORM LOGIC (FIXED REDUNDANCY)
+// ==========================================
 function setupEntryForm() {
     const form = document.getElementById('entryForm');
     const inputNama = document.getElementById('entNama');
@@ -394,19 +376,25 @@ function setupEntryForm() {
             const btn = document.getElementById('btnSubmitForm');
             const statusDiv = document.getElementById('entStatus');
 
+            // DATA SUBMIT: Gabungkan semua kolom (Termasuk yang kondisional)
             const dataToSubmit = [
-                new Date().toLocaleString('id-ID'), 
-                userData.email,
-                userData.name,
-                document.getElementById('entNip').value,
-                document.querySelector('input[name="entUbahPangkat"]:checked').value,
-                document.querySelector('input[name="entAdaAk"]:checked').value,
-                document.getElementById('entPredikat').value,
-                document.getElementById('entLinkFile').value
+                new Date().toLocaleString('id-ID'),                                // A: Timestamp
+                userData.email,                                                   // B: Email
+                userData.name,                                                    // C: Nama
+                document.getElementById('entNip').value,                         // D: NIP
+                document.querySelector('input[name="entUbahPangkat"]:checked').value, // E: Perubahan Pangkat
+                document.getElementById('entLinkSkPangkat').value || "-",          // F: Link SK Pangkat
+                document.querySelector('input[name="entAdaAk"]:checked').value,    // G: Ada AK sd 2024
+                document.getElementById('entPredikat2023').value || "-",           // H: Predikat 2023
+                document.getElementById('entLink2023').value || "-",              // I: Link 2023
+                document.getElementById('entPredikat2024').value || "-",           // J: Predikat 2024
+                document.getElementById('entLink2024').value || "-",              // K: Link 2024
+                document.getElementById('entPredikat').value,                     // L: Predikat 2025
+                document.getElementById('entLinkFile').value                      // M: Link 2025
             ];
 
             btn.disabled = true;
-            btn.innerHTML = 'Processing...';
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
 
             try {
                 const encodedData = encodeURIComponent(JSON.stringify(dataToSubmit));
@@ -416,68 +404,95 @@ function setupEntryForm() {
                 if (result.status === "success") {
                     statusDiv.innerHTML = `<div class="card border-0 shadow-sm p-5 text-center mt-3"><i class="bi bi-check-circle-fill fs-1 text-success mb-3"></i><h4>Sukses!</h4><p>Jawaban Anda telah direkam.</p><button onclick="location.reload()" class="btn btn-primary btn-sm px-4">Kirim Lainnya</button></div>`;
                     form.style.display = 'none';
+                } else {
+                    alert("Gagal: " + (result.message || "Terjadi kesalahan"));
                 }
-            } catch (err) { alert("Error koneksi."); }
-            finally { btn.disabled = false; btn.innerHTML = 'Submit'; }
+            } catch (err) { 
+                console.error(err);
+                alert("Error koneksi ke server."); 
+            } finally { 
+                btn.disabled = false; 
+                btn.innerHTML = 'Submit'; 
+            }
         });
     }
 }
 
-// 9. SIDEBAR TOGGLE & CORE UTILS
-function handleSidebarToggle() { const b = document.body; if (window.innerWidth < 992) b.classList.toggle('sidebar-open'); else { b.classList.toggle('collapsed-sidebar'); localStorage.setItem('sidebarCollapsed', b.classList.contains('collapsed-sidebar')); } }
+// Conditional Form Helpers
+function togglePangkatConditional(val) {
+    const area = document.getElementById('pangkatConditionalArea');
+    const input = document.getElementById('entLinkSkPangkat');
+    area.style.display = (val === 'Ya') ? 'block' : 'none';
+    input.required = (val === 'Ya');
+    if (val !== 'Ya') input.value = "";
+}
+
+function toggleConditionalQuestions(val) {
+    const div = document.getElementById('conditionalQuestions');
+    const isNeeded = (val === 'Belum ada');
+    div.style.display = isNeeded ? 'block' : 'none';
+    
+    ['entPredikat2023', 'entLink2023', 'entPredikat2024', 'entLink2024'].forEach(id => {
+        document.getElementById(id).required = isNeeded;
+    });
+}
+
+async function autoFillUsulanForm() {
+    const inputNip = document.getElementById('entNip');
+    if (!inputNip) return;
+
+    const cached = getCachedProfile(userData.email);
+    if (cached && cached.pak?.values) {
+        inputNip.value = cached.pak.values[3] || "";
+    } else {
+        try {
+            const res = await fetch(`${API_URL}?action=getProfile&email=${userData.email}`);
+            const result = await res.json();
+            if (result.status === "success") {
+                setCachedProfile(userData.email, result.data);
+                inputNip.value = result.data.pak.values[3] || "";
+            }
+        } catch (e) { console.log("Auto-fill NIP failed"); }
+    }
+}
+
+// ==========================================
+// 8. UI HELPERS
+// ==========================================
+function handleSidebarToggle() { 
+    const b = document.body; 
+    if (window.innerWidth < 992) {
+        b.classList.toggle('sidebar-open'); 
+    } else { 
+        b.classList.toggle('collapsed-sidebar'); 
+        localStorage.setItem('sidebarCollapsed', b.classList.contains('collapsed-sidebar')); 
+    } 
+}
 
 function updateToggleIcon(isCollapsed) {
     const icon = document.querySelector('.btn-toggle-custom i');
     if(icon) icon.className = isCollapsed ? 'bi bi-list fs-3' : 'bi bi-text-indent-left fs-3';
 }
 
-function showPage(id) {
-    document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
-    const target = document.getElementById(`page-${id}`);
-    if(target) target.style.display = 'block';
-
-    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-    const activeNav = document.getElementById(`nav-${id}`);
-    if(activeNav) activeNav.classList.add('active');
-
-    // TAMBAHKAN INI: Jika yang dibuka adalah halaman entry, jalankan auto-fill
-    if (id === 'entry') {
-        autoFillUsulanForm();
-    }
-
-    // Jika dashboard dibuka, render card data AK
-    if (id === 'dashboard') {
-        if (cachedProfileData) renderDashboardCards();
-    }
-
-    if(window.innerWidth < 992) document.body.classList.remove('sidebar-open');
+function applyTheme() { 
+    document.body.classList.toggle('dark', state.theme === 'dark'); 
+    const themeIcon = document.querySelector('#themeBtn i');
+    if(themeIcon) themeIcon.className = state.theme === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars'; 
 }
 
-function toggleSub(id) {
-    const el = document.getElementById(id);
-    el.style.display = el.style.display === 'none' ? 'block' : 'none';
-}
-
-function applyTheme() { document.body.classList.toggle('dark', state.theme === 'dark'); document.querySelector('#themeBtn i').className = state.theme === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars'; }
 function toggleTheme() { state.theme = state.theme === 'light' ? 'dark' : 'light'; localStorage.setItem('theme', state.theme); applyTheme(); }
 function changeLang(v) { localStorage.setItem('lang', v); location.reload(); }
 function logout() { sessionStorage.clear(); window.location.href = 'login.html'; }
 function saveAdminSettings() { sessionStorage.setItem('activeRole', document.getElementById('roleSelect').value); location.reload(); }
 
-// 9. SIMULATION BUTTON (BACK TO ADMIN)
 function checkSimulationStatus() {
     const btnBack = document.getElementById('btnBackToAdmin');
-    // Jika User Login aslinya Admin, tapi sedang menyamar jadi User
-    if (userData.role === 'Admin' && state.role === 'User') {
-        if(btnBack) btnBack.style.display = 'inline-block';
-    } else {
-        if(btnBack) btnBack.style.display = 'none';
-    }
+    if (btnBack) btnBack.style.display = (userData.role === 'Admin' && state.role === 'User') ? 'inline-block' : 'none';
 }
 
 function backToAdmin() {
     sessionStorage.setItem('activeRole', 'Admin');
-    location.reload();
+    window.location.reload();
 }
 
 async function fetchUsersToTable() {
@@ -486,33 +501,93 @@ async function fetchUsersToTable() {
     try {
         const res = await fetch(`${API_URL}?action=getAllUsers&email=${userData.email}`);
         const result = await res.json();
-        const h = result.data[0];
-        tbody.innerHTML = result.data.slice(1).map(r => `<tr><td><b>${r[h.indexOf('Nama')]}</b></td><td>${r[h.indexOf('Email')]}</td><td><span class="badge-role ${r[h.indexOf('Role')] === 'Admin' ? 'admin-pill' : 'user-pill'}">${r[h.indexOf('Role')]}</span></td></tr>`).join('');
-    } catch (e) { }
+        
+        if (result.status === "success" && result.data) {
+            const h = result.data[0];
+            
+            // 1. Cari index kolom secara dinamis agar jika urutan di sheet berubah, kode tetap jalan
+            const namaIdx = h.indexOf('Nama');
+            const emailIdx = h.indexOf('Email');
+            const roleIdx = h.indexOf('Role');
+            const unitIdx = h.indexOf('PBJ'); 
+
+            // 2. Mapping data ke dalam baris tabel
+            tbody.innerHTML = result.data.slice(1).map(r => `
+                <tr>
+                    <td><b>${r[namaIdx] || '-'}</b></td>
+                    <td>${r[emailIdx] || '-'}</td>
+                    <td>
+                        <span class="badge-role ${r[roleIdx] === 'Admin' ? 'admin-pill' : 'user-pill'}">
+                            ${r[roleIdx] || '-'}
+                        </span>
+                    </td>
+                    <td>${unitIdx !== -1 ? (r[unitIdx] || '-') : '-'}</td>
+                </tr>
+            `).join('');
+        }
+    } catch (e) { 
+        console.error("Gagal fetch user ke tabel:", e);
+    }
 }
 
-
-// DASHBOARD CARDS — isi dari cache profil jika tersedia
 function renderDashboardCards() {
     const profileData = getCachedProfile(userData.email);
-    if (!profileData) return;
+    if (!profileData) {
+        console.log("Dashboard: Data belum ada di cache, memulai fetching...");
+        loadUserDataSelf(); 
+        return;
+    }
+    
     const d = profileData.pak.values;
     const dashFields = { 
-        'dash-ak-pengangkatan': 24, 
-        'dash-ak-dasar': 25, 
-        'dash-ak-dupak': 26, 
-        'dash-ak-integrasi': 27, 
-        'dash-predikat-2023': 30, 
-        'dash-konversi-2023': 33, 
-        'dash-predikat-2024': 39, 
-        'dash-akumulasi-2024': 40, 
-        'dash-predikat-2025': 43, 
-        'dash-akumulasi-2025': 46, 
-        'dash-predikat-2026': 50, 
-        'dash-akumulasi-2026': 54 };
+        'dash-ak-pengangkatan': 23, 
+        'dash-ak-dasar': 24, 
+        'dash-ak-dupak': 25, 
+        'dash-ak-integrasi': 26, 
+        'dash-predikat-2023': 29,  
+        'dash-predikat-2024': 35, 
+        'dash-akumulasi-2024': 39, 
+        'dash-predikat-2025': 44, 
+        'dash-akumulasi-2025': 48,
+        'dash-masa-penilaian-2026': 52, 
+        'dash-predikat-2026': 53, 
+        'dash-konversi-2026': 56,
+        'dash-akumulasi-2026': 57 
+    };
+
     for (const [elId, idx] of Object.entries(dashFields)) {
         const el = document.getElementById(elId);
-        if (el) el.textContent = d[idx] || '—';
+        if (el) {
+            let val = d[idx];
+
+            // 1. Logika Khusus untuk Label Masa Penilaian
+            if (elId === 'dash-masa-penilaian-2026') {
+                // Jika ada isinya, buat format: *Masa Penilaian 2026: Januari - Maret
+                // Jika kosong, jangan tampilkan apa-apa
+                el.textContent = val ? `*Masa Penilaian 2026: ${val}` : '';
+                continue; // Lanjut ke elemen berikutnya
+            }
+
+            // 1. Cek apakah data ada (tidak null, tidak undefined, tidak string kosong)
+            if (val !== null && val !== undefined && val !== '') {
+                
+                // 2. Jika datanya adalah angka, lakukan pembulatan 2 desimal
+                if (!isNaN(parseFloat(val))) {
+                    val = parseFloat(val).toFixed(2);
+                } 
+                // 3. Jika datanya adalah teks (seperti "Baik"), biarkan apa adanya
+                else {
+                    val = val.toString();
+                }
+
+            } else {
+                // 4. Jika data kosong, set ke strip
+                val = '—';
+            }
+
+            // 5. TAMPILKAN ke elemen (Baris ini harus di luar blok IF angka agar teks tetap muncul)
+            el.textContent = val;
+        }
     }
 }
 
@@ -521,92 +596,7 @@ function showAnalitikDev() {
     document.getElementById('analitikDataDisplay').innerHTML = `<div class="alert alert-info p-5 text-center" style="border-radius:20px"><h4>${t('nav_analitik')}</h4>${t('dev_mode')}</div>`; 
 }
 
-function formatAuto(val) {
-    if (!val || val === '-') return '-';
-    // Jika formatnya tanggal ISO (ada huruf T dan Z)
-    if (typeof val === 'string' && val.includes('T') && val.includes('Z')) {
-        const d = new Date(val);
-        return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-    }
-    return val;
-}
-
-async function autoFillUsulanForm() {
-    const inputNama = document.getElementById('entNama');
-    const inputNip = document.getElementById('entNip');
-
-    if (inputNama) inputNama.value = userData.name;
-
-    const cached = getCachedProfile(userData.email);
-    if (cached && cached.pak && cached.pak.values) {
-        const nipVal = cached.pak.values[3];
-        if (inputNip) inputNip.value = nipVal || "";
-    } else {
-        try {
-            const res = await fetch(`${API_URL}?action=getProfile&email=${userData.email}`);
-            const result = await res.json();
-            if (result.status === "success") {
-                setCachedProfile(userData.email, result.data);
-                const nipVal = result.data.pak.values[3];
-                if (inputNip) inputNip.value = nipVal || "";
-            }
-        } catch (e) {
-            console.log("Auto-fill NIP gagal: Koneksi bermasalah");
-        }
-    }
-}
-
-
-// 1. Fungsi memunculkan/menyembunyikan pertanyaan tambahan
-function toggleConditionalQuestions(value) {
-    const div = document.getElementById('conditionalQuestions');
-    if (value === 'Belum ada') {
-        div.style.display = 'block';
-        // Tambahkan atribut required secara dinamis agar validasi jalan
-        document.getElementById('entPredikat2023').required = true;
-        document.getElementById('entLink2023').required = true;
-        document.getElementById('entPredikat2024').required = true;
-        document.getElementById('entLink2024').required = true;
-    } else {
-        div.style.display = 'none';
-        document.getElementById('entPredikat2023').required = false;
-        document.getElementById('entLink2023').required = false;
-        document.getElementById('entPredikat2024').required = false;
-        document.getElementById('entLink2024').required = false;
-    }
-}
-
-const dataToSubmit = [
-    new Date().toLocaleString('id-ID'),                // A: Timestamp
-    userData.email,                                   // B: Email
-    userData.name,                                    // C: Nama
-    document.getElementById('entNip').value,          // D: NIP Baru
-    document.querySelector('input[name="entUbahPangkat"]:checked').value, // E: Perubahan Pangkat
-    
-    // KOLOM BARU (F): Link SK Pangkat
-    document.getElementById('entLinkSkPangkat').value || "-", 
-    
-    document.querySelector('input[name="entAdaAk"]:checked').value,      // G: Dokumen AK sd 2024
-    
-    // Pertanyaan Tambahan (H s/d K)
-    document.getElementById('entPredikat2023').value || "-",
-    document.getElementById('entLink2023').value || "-",
-    document.getElementById('entPredikat2024').value || "-",
-    document.getElementById('entLink2024').value || "-"
-];
-
-
-// 1. Fungsi pemicu untuk SK Pangkat
-function togglePangkatConditional(value) {
-    const area = document.getElementById('pangkatConditionalArea');
-    const input = document.getElementById('entLinkSkPangkat');
-    
-    if (value === 'Ya') {
-        area.style.display = 'block';
-        input.required = true;
-    } else {
-        area.style.display = 'none';
-        input.required = false;
-        input.value = ""; // Reset jika user berubah pikiran ke 'Tidak'
-    }
+function toggleSub(id) {
+    const el = document.getElementById(id);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
