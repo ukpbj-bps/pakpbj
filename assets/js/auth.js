@@ -1,6 +1,6 @@
 // CONFIGURATION
 const GOOGLE_CLIENT_ID = "545994110940-n5dm8uc1beho1pn26giphg9b7ij3r7tl.apps.googleusercontent.com"; 
-const API_URL = "https://script.google.com/macros/s/AKfycbyBlSWBI_vbQ1B6EWjrqfnPtHZzyD5pvCQNJOQUEUXgPmLg-d0rXr2xHbV8mx5PY5vN/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxtj9M4J2ApefCDnS76DS0NUQQojL_owOyAHxfKZwu07nCDbmO2KRC6zSSXyrHYFxpv/exec";
 
 
 // Load Google Sign-In button
@@ -18,10 +18,9 @@ window.onload = function () {
 // Handle login response
 async function handleCredentialResponse(response) {
     const payload = decodeJwtResponse(response.credential);
-    document.getElementById('buttonDiv').innerHTML = "Memverifikasi...";
+    document.getElementById('buttonDiv').innerHTML = '<div class="verifying-text">Memverifikasi...</div>';
 
     try {
-        // Panggil API Backend untuk cek apakah email ada di GSheet
         const res = await fetch(`${API_URL}?action=checkUser&email=${payload.email}`);
         const result = await res.json();
 
@@ -31,7 +30,8 @@ async function handleCredentialResponse(response) {
                 name: result.nama,
                 email: payload.email,
                 role: result.role,
-                picture: payload.picture
+                picture: payload.picture,
+                pbj: result.pbj 
             }));
             window.location.href = 'index.html';
         } else {

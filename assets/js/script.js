@@ -6,8 +6,8 @@
 // ==========================================
 // 1. KONFIGURASI & DATA PENGGUNA
 // ==========================================
-const userData = JSON.parse(sessionStorage.getItem('userData')) || { role: 'User', name: 'Guest', email: '', picture: '' };
-const API_URL = "https://script.google.com/macros/s/AKfycbyXr6UivqYsL-koCiHAuC_wJk1sHioB69h_ElL-ycmHncXJuWOdhAn1vC1iyNzZVq-g/exec";
+const userData = JSON.parse(sessionStorage.getItem('userData')) || { role: 'User', name: 'Guest', email: '', picture: '', pbj: '' };
+const API_URL = "https://script.google.com/macros/s/AKfycbxtj9M4J2ApefCDnS76DS0NUQQojL_owOyAHxfKZwu07nCDbmO2KRC6zSSXyrHYFxpv/exec";
 
 let state = {
     role: sessionStorage.getItem('activeRole') || userData.role,
@@ -106,54 +106,64 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEntryForm();
 });
 
-async function initApp() { // Tambahkan async
+async function initApp() { 
     applyTheme();
     
-    // 1. Load data user dulu (tunggu sampai selesai)
-    if (state.role === 'Admin') {
-        // Jika admin, kita juga perlu ambil data unit kerjanya sendiri untuk pengecekan menu
-        // Kita panggil loadUserDataSelf agar state.unitKerja terisi
-        await loadUserDataSelf(); 
-        fetchAllUsersAndBulkCache();
-    } else {
-        // Jika user, tunggu data dirinya selesai di-load
-        await loadUserDataSelf();
-    }
+    try {
+        // 1. Load data user dulu (tunggu sampai selesai)
+        if (state.role === 'Admin') {
+            await loadUserDataSelf(); 
+            fetchAllUsersAndBulkCache();
+        } else {
+            await loadUserDataSelf();
+        }
 
-    // 2. Setelah data user (termasuk unit kerja) didapat, BARU render sidebar
-    renderSidebar();
-    
-    document.getElementById('welcomeText').innerText = `${t('welcome')}, ${userData.name}! 👋`;
-    document.getElementById('topRoleBadge').innerText = state.role;
-    document.getElementById('topRoleBadge').className = `badge-role ${state.role === 'Admin' ? 'admin-pill' : 'user-pill'}`;
-    document.getElementById('langTop').value = state.lang;
-    
-    if (userData.picture) document.getElementById('userPic').src = userData.picture;
-    
-    if (state.role === 'Admin') {
-        const rs = document.getElementById('roleSelect');
-        if(rs) rs.value = state.role;
-        fetchUsersToTable(); 
+        // 2. Setelah data didapat, BARU render sidebar & dashboard
+        renderSidebar();
+        
+        document.getElementById('welcomeText').innerText = `${t('welcome')}, ${userData.name}! 👋`;
+        document.getElementById('topRoleBadge').innerText = state.role;
+        document.getElementById('topRoleBadge').className = `badge-role ${state.role === 'Admin' ? 'admin-pill' : 'user-pill'}`;
+        document.getElementById('langTop').value = state.lang;
+        
+        if (userData.picture) document.getElementById('userPic').src = userData.picture;
+        
+        if (state.role === 'Admin') {
+            const rs = document.getElementById('roleSelect');
+            if(rs) rs.value = state.role;
+            fetchUsersToTable(); 
+        }
+        
+        showPage('dashboard');
+        checkSimulationStatus();
+
+    } catch (error) {
+        console.error("Init App Error:", error);
+    } finally {
+        // 3. APA PUN YANG TERJADI (berhasil/gagal), hilangkan loading screen
+        hideLoading();
     }
-    
-    showPage('dashboard');
-    checkSimulationStatus();
 }
 
+
+
 async function loadUserDataSelf() {
+    // Set unit kerja dari data login yang sudah ada di sessionStorage
+    if (userData.pbj) {
+        state.unitKerja = userData.pbj.toString().trim().toUpperCase();
+    }
+
+    // Sisanya tetap sama (ambil profil pak, training, dll)
     if (!getCachedProfile(viewingEmail)) {
         try {
             const res = await fetch(`${API_URL}?action=getProfile&email=${viewingEmail}`);
             const result = await res.json();
             if (result.status === "success") {
                 setCachedProfile(viewingEmail, result.data);
-                state.unitKerja = result.data.userData.values[4] || '';
                 renderDashboardCards();
             }
         } catch (e) { console.error("Failed to load self profile", e); }
     } else {
-        const cached = getCachedProfile(viewingEmail);
-    if (cached?.userData?.values) state.unitKerja = cached.userData.values[4] || '';
         renderDashboardCards();
     }
 }
@@ -161,12 +171,16 @@ async function loadUserDataSelf() {
 // ==========================================
 // 5. NAVIGATION & SIDEBAR
 // ==========================================
+// script.js
+// script.js
 function renderSidebar() {
     const menu = document.getElementById('sidebarMenu');
+    if (!menu) return;
+
     const isAdmin = state.role === 'Admin';
-    
-    // SYARAT: Menu Usulan AK hanya muncul jika dia Admin ATAU Unit Kerjanya adalah 'UKPBJ'
-    const canSeeUsulan = isAdmin || state.unitKerja === 'UKPBJ';
+    const unit = state.unitKerja;
+    const canSeeUsulan = isAdmin || unit === 'UKPBJ';
+
 
     menu.innerHTML = `
         <a class="nav-link" id="nav-dashboard" onclick="showPage('dashboard')"><i class="bi bi-house-door-fill"></i> <span>${t('nav_dash')}</span></a>
@@ -189,10 +203,12 @@ function renderSidebar() {
         ${isAdmin ? `
             <a class="nav-link" id="nav-analitik" onclick="showAnalitikDev()"><i class="bi bi-bar-chart-fill"></i> <span>${t('nav_analitik')}</span></a>
             <a class="nav-link" id="nav-pengguna" onclick="showPage('pengguna')"><i class="bi bi-people-fill"></i> <span>${t('nav_pengguna')}</span></a>
-            <a class="nav-link" id="nav_pengaturan" onclick="showPage('pengaturan')"><i class="bi bi-gear-fill"></i> <span>${t('nav_set')}</span></a>
+            <a class="nav-link" id="nav-pengaturan" onclick="showPage('pengaturan')"><i class="bi bi-gear-fill"></i> <span>${t('nav_set')}</span></a>
         ` : ''}
     `;
 }
+
+
 function showPage(id) {
     document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
     const target = document.getElementById(`page-${id}`);
@@ -448,7 +464,7 @@ async function autoFillUsulanForm() {
 
     const cached = getCachedProfile(userData.email);
     if (cached && cached.pak?.values) {
-        inputNip.value = cached.pak.values[3] || "";
+        inputNip.value = cached.pak.values[2] || "";
     } else {
         try {
             const res = await fetch(`${API_URL}?action=getProfile&email=${userData.email}`);
@@ -604,4 +620,11 @@ function showAnalitikDev() {
 function toggleSub(id) {
     const el = document.getElementById(id);
     el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function hideLoading() {
+    const loader = document.getElementById('loading-screen');
+    if (loader) {
+        loader.classList.add('fade-out');
+    }
 }

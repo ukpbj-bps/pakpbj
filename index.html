@@ -34,6 +34,16 @@
 </head>
 <body>
 
+  <div id="loading-screen" class="loading-screen">
+    <div class="loader-content text-center">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <h5 class="mt-3 fw-bold text-primary">Mohon Tunggu...</h5>
+        <p class="text-muted small">Sedang mengambil data dari server</p>
+    </div>
+</div>
+
   <div class="sidebar-overlay" onclick="handleSidebarToggle()"></div>
 
   <header class="topbar">
@@ -463,4 +473,5 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
   <script src="assets/js/script.js"></script>
 </body>
+
 </html>
