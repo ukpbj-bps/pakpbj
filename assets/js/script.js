@@ -51,12 +51,12 @@ function setCachedProfile(email, data) {
 
 const i18n = {
     id: { 
-        nav_dash: "Beranda", nav_profile: "Profil", nav_analitik: "Analitik", nav_pengguna: "Pengguna", nav_set: "Pengaturan", nav_entry: "Usulan AK",
+        nav_dash: "Beranda", nav_profile: "Profil", nav_analitik: "Analitik", nav_set: "Pengaturan", nav_entry: "Usulan AK",
         sub_pak: "Data pribadi", sub_training: "Pelatihan dan Ujikom", sub_experience: "Pengalaman", 
         welcome: "Selamat Datang", loading: "Memuat data...", dev_mode: "Fitur masih dalam pengembangan", btn_save: "Simpan"
     },
     en: { 
-        nav_dash: "Home", nav_profile: "Profile", nav_analitik: "Analytics", nav_pengguna: "Users", nav_set: "Settings", nav_entry: "Usulan AK",
+        nav_dash: "Home", nav_profile: "Profile", nav_analitik: "Analytics", nav_set: "Settings", nav_entry: "Usulan AK",
         sub_pak: "Personal Details", sub_training: "Training & Competence", sub_experience: "Experience", 
         welcome: "Welcome", loading: "Fetching data...", dev_mode: "Under development", btn_save: "Save"
     }
@@ -218,7 +218,6 @@ function renderSidebar() {
 
         ${isAdmin ? `
             <a class="nav-link" id="nav-analitik" onclick="showAnalitikDev()"><i class="bi bi-bar-chart-fill"></i> <span>${t('nav_analitik')}</span></a>
-            <a class="nav-link" id="nav-pengguna" onclick="showPage('pengguna')"><i class="bi bi-people-fill"></i> <span>${t('nav_pengguna')}</span></a>
             <a class="nav-link" id="nav-pengaturan" onclick="showPage('pengaturan')"><i class="bi bi-gear-fill"></i> <span>${t('nav_set')}</span></a>
         ` : ''}
     `;
@@ -241,7 +240,7 @@ function showPage(id) {
 
     // 3. LOGIKA HIGHLIGHT MENU UTAMA (Hanya untuk menu tunggal)
     // Kita hanya izinkan menu-menu ini untuk menjadi hijau
-    const allowedSingleMenus = ['dashboard', 'pengguna', 'pengaturan', 'analitik'];
+    const allowedSingleMenus = ['dashboard', 'pengaturan', 'analitik'];
     
     if (allowedSingleMenus.includes(id)) {
         const navEl = document.getElementById(`nav-${id}`);
