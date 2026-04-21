@@ -135,7 +135,7 @@ body.dark .submenu { background: rgba(255,255,255,0.03); }
     padding: 8px 15px 8px 45px;
     color: var(--sidebar-text);
     text-decoration: none;
-    font-size: 0.8rem;
+    font-size: 0.875rem;
     border-radius: 5px;
 }
 .submenu a:hover { color: var(--primary); }

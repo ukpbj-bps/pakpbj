@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard PAK PBJ</title>
-    <link rel="icon" type="image/png" href="assets/img/logo.png">
     <script>
         if (sessionStorage.getItem('isLoggedIn') !== 'true') window.location.href = 'login.html';
     </script>
+    <link rel="icon" type="image/png" href="assets/img/logo.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
@@ -34,16 +34,6 @@
 </head>
 <body>
 
-  <div id="loading-screen" class="loading-screen">
-    <div class="loader-content text-center">
-        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-        <h5 class="mt-3 fw-bold text-primary">Mohon Tunggu...</h5>
-        <p class="text-muted small">Sedang mengambil data dari server</p>
-    </div>
-</div>
-
   <div class="sidebar-overlay" onclick="handleSidebarToggle()"></div>
 
   <header class="topbar">
@@ -52,7 +42,7 @@
             <i class="bi bi-text-indent-left fs-3"></i>
         </button>
         <a href="#" class="brand-logo ms-3 text-decoration-none">
-            <span style="color: #16a34a;"> Sistem Informasi PAK UKPBJ BPS</span>
+            <span style="color: #16a34a;">Sistem Informasi PAK UKPBJ BPS</span>
         </a>
     </div>
 
@@ -100,168 +90,162 @@
       <section id="page-dashboard" class="page-content">
           <h3 id="welcomeText" class="fw-800"></h3>
 
-         <!-- 5 CARD DATA AK -->
-<div class="row g-3 mt-2">
+          <!-- 5 CARD DATA AK -->
+          <div class="row g-3 mt-2">
 
-  <!-- Card 1: Kinerja 2026 -->
-<div class="col-12 col-md-6 col-xl-4">
-  <div class="card border-0 shadow-sm h-100" style="border-radius:16px; border-top: 4px solid #ea580c !important;">
-    <div class="card-body p-4">
-      <div class="d-flex align-items-center gap-2 mb-3">
-        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:38px;height:38px;background:#fff7ed;">
-          <i class="bi bi-calendar2-check-fill" style="color:#ea580c;"></i>
-        </div>
-        <span class="fw-bold small text-uppercase" style="letter-spacing:0.5px; color:#ea580c;">Periode 2026</span>
-      </div>
-      <div class="row g-2">
-        <!-- Predikat dan Konversi berdampingan -->
-        <div class="col-6">
-          <div class="p-2 rounded-3" style="background:#fff7ed;">
-            <div class="text-muted small mb-1">Predikat 2026</div>
-            <div class="fw-bold fs-6" id="dash-predikat-2026">—</div>
-          </div>
-        </div>
-        <div class="col-6">
-          <div class="p-2 rounded-3" style="background:#fff7ed;">
-            <div class="text-muted small mb-1">Konversi PK</div>
-            <div class="fw-bold fs-6" id="dash-konversi-2026">—</div>
-          </div>
-        </div>
-        <!-- Akumulasi -->
-        <div class="col-12">
-          <div class="p-2 rounded-3" style="background:#fff7ed;">
-            <div class="text-muted small mb-1">Akumulasi AK s.d. 2026</div>
-            <div class="fw-bold fs-5" id="dash-akumulasi-2026">—</div>
-          </div>
-          <small id="dash-masa-penilaian-2026" class="text-muted fw-bold" style="font-size: 11px;"></small>
-        </div>
-      </div>
+            <!-- Card 1: Data Awal AK -->
+            <div class="col-12 col-md-6 col-xl-4">
+              <div class="card border-0 shadow-sm h-100" style="border-radius:16px; border-top: 4px solid #2563eb !important;">
+                <div class="card-body p-4">
+                  <div class="d-flex align-items-center gap-2 mb-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:38px;height:38px;background:#eff6ff;">
+                      <i class="bi bi-file-earmark-text-fill text-primary"></i>
+                    </div>
+                    <span class="fw-bold small text-uppercase" style="letter-spacing:0.5px; color:#2563eb;">Data AK Awal</span>
+                  </div>
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <div class="p-2 rounded-3" style="background:#f8fafc;">
+                        <div class="text-muted small mb-1">AK Pengangkatan</div>
+                        <div class="fw-bold fs-5" id="dash-ak-pengangkatan">—</div>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="p-2 rounded-3" style="background:#f8fafc;">
+                        <div class="text-muted small mb-1">AK Dasar</div>
+                        <div class="fw-bold fs-5" id="dash-ak-dasar">—</div>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="p-2 rounded-3" style="background:#f8fafc;">
+                        <div class="text-muted small mb-1">AK dari DUPAK</div>
+                        <div class="fw-bold fs-5" id="dash-ak-dupak">—</div>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="p-2 rounded-3" style="background:#f8fafc;">
+                        <div class="text-muted small mb-1">AK Integrasi s.d. 2022</div>
+                        <div class="fw-bold fs-5" id="dash-ak-integrasi">—</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-  
+            <!-- Card 2: Kinerja 2023 -->
+            <div class="col-12 col-md-6 col-xl-4">
+              <div class="card border-0 shadow-sm h-100" style="border-radius:16px; border-top: 4px solid #7c3aed !important;">
+                <div class="card-body p-4">
+                  <div class="d-flex align-items-center gap-2 mb-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:38px;height:38px;background:#f5f3ff;">
+                      <i class="bi bi-calendar2-check-fill" style="color:#7c3aed;"></i>
+                    </div>
+                    <span class="fw-bold small text-uppercase" style="letter-spacing:0.5px; color:#7c3aed;">Periode 2023</span>
+                  </div>
+                  <div class="row g-2">
+                    <div class="col-12">
+                      <div class="p-2 rounded-3" style="background:#faf5ff;">
+                        <div class="text-muted small mb-1">Predikat Kinerja 2023</div>
+                        <div class="fw-bold fs-6" id="dash-predikat-2023">—</div>
+                      </div>
+                    </div>
+                    <div class="col-12">
+                      <div class="p-2 rounded-3" style="background:#faf5ff;">
+                        <div class="text-muted small mb-1">Konversi PK 2023</div>
+                        <div class="fw-bold fs-5" id="dash-konversi-2023">—</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-    </div>
-  </div>
-</div>
+            <!-- Card 3: Kinerja 2024 -->
+            <div class="col-12 col-md-6 col-xl-4">
+              <div class="card border-0 shadow-sm h-100" style="border-radius:16px; border-top: 4px solid #0891b2 !important;">
+                <div class="card-body p-4">
+                  <div class="d-flex align-items-center gap-2 mb-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:38px;height:38px;background:#ecfeff;">
+                      <i class="bi bi-calendar2-check-fill" style="color:#0891b2;"></i>
+                    </div>
+                    <span class="fw-bold small text-uppercase" style="letter-spacing:0.5px; color:#0891b2;">Periode 2024</span>
+                  </div>
+                  <div class="row g-2">
+                    <div class="col-12">
+                      <div class="p-2 rounded-3" style="background:#f0fdfe;">
+                        <div class="text-muted small mb-1">Predikat Kinerja 2024</div>
+                        <div class="fw-bold fs-6" id="dash-predikat-2024">—</div>
+                      </div>
+                    </div>
+                    <div class="col-12">
+                      <div class="p-2 rounded-3" style="background:#f0fdfe;">
+                        <div class="text-muted small mb-1">Akumulasi AK s.d. 2024</div>
+                        <div class="fw-bold fs-5" id="dash-akumulasi-2024">—</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-  <!-- Card 2: Kinerja 2025 -->
-  <div class="col-12 col-md-6 col-xl-4">
-    <div class="card border-0 shadow-sm h-100" style="border-radius:16px; border-top: 4px solid #16a34a !important;">
-      <div class="card-body p-4">
-        <div class="d-flex align-items-center gap-2 mb-3">
-          <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:38px;height:38px;background:#f0fdf4;">
-            <i class="bi bi-calendar2-check-fill" style="color:#16a34a;"></i>
-          </div>
-          <span class="fw-bold small text-uppercase" style="letter-spacing:0.5px; color:#16a34a;">Periode 2025</span>
-        </div>
-        <div class="row g-2">
-          <div class="col-12">
-            <div class="p-2 rounded-3" style="background:#f0fdf4;">
-              <div class="text-muted small mb-1">Predikat Kinerja 2025</div>
-              <div class="fw-bold fs-6" id="dash-predikat-2025">—</div>
+            <!-- Card 4: Kinerja 2025 -->
+            <div class="col-12 col-md-6 col-xl-4">
+              <div class="card border-0 shadow-sm h-100" style="border-radius:16px; border-top: 4px solid #16a34a !important;">
+                <div class="card-body p-4">
+                  <div class="d-flex align-items-center gap-2 mb-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:38px;height:38px;background:#f0fdf4;">
+                      <i class="bi bi-calendar2-check-fill" style="color:#16a34a;"></i>
+                    </div>
+                    <span class="fw-bold small text-uppercase" style="letter-spacing:0.5px; color:#16a34a;">Periode 2025</span>
+                  </div>
+                  <div class="row g-2">
+                    <div class="col-12">
+                      <div class="p-2 rounded-3" style="background:#f0fdf4;">
+                        <div class="text-muted small mb-1">Predikat Kinerja 2025</div>
+                        <div class="fw-bold fs-6" id="dash-predikat-2025">—</div>
+                      </div>
+                    </div>
+                    <div class="col-12">
+                      <div class="p-2 rounded-3" style="background:#f0fdf4;">
+                        <div class="text-muted small mb-1">Akumulasi AK s.d. 2025</div>
+                        <div class="fw-bold fs-5" id="dash-akumulasi-2025">—</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="col-12">
-            <div class="p-2 rounded-3" style="background:#f0fdf4;">
-              <div class="text-muted small mb-1">Akumulasi AK s.d. 2025</div>
-              <div class="fw-bold fs-5" id="dash-akumulasi-2025">—</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Card 3: Kinerja 2024 -->
-  <div class="col-12 col-md-6 col-xl-4">
-    <div class="card border-0 shadow-sm h-100" style="border-radius:16px; border-top: 4px solid #0891b2 !important;">
-      <div class="card-body p-4">
-        <div class="d-flex align-items-center gap-2 mb-3">
-          <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:38px;height:38px;background:#ecfeff;">
-            <i class="bi bi-calendar2-check-fill" style="color:#0891b2;"></i>
-          </div>
-          <span class="fw-bold small text-uppercase" style="letter-spacing:0.5px; color:#0891b2;">Periode 2024</span>
-        </div>
-        <div class="row g-2">
-          <div class="col-12">
-            <div class="p-2 rounded-3" style="background:#f0fdfe;">
-              <div class="text-muted small mb-1">Predikat Kinerja 2024</div>
-              <div class="fw-bold fs-6" id="dash-predikat-2024">—</div>
+            <!-- Card 5: Kinerja 2026 -->
+            <div class="col-12 col-md-6 col-xl-4">
+              <div class="card border-0 shadow-sm h-100" style="border-radius:16px; border-top: 4px solid #ea580c !important;">
+                <div class="card-body p-4">
+                  <div class="d-flex align-items-center gap-2 mb-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:38px;height:38px;background:#fff7ed;">
+                      <i class="bi bi-calendar2-check-fill" style="color:#ea580c;"></i>
+                    </div>
+                    <span class="fw-bold small text-uppercase" style="letter-spacing:0.5px; color:#ea580c;">Periode 2026</span>
+                  </div>
+                  <div class="row g-2">
+                    <div class="col-12">
+                      <div class="p-2 rounded-3" style="background:#fff7ed;">
+                        <div class="text-muted small mb-1">Predikat Kinerja 2026</div>
+                        <div class="fw-bold fs-6" id="dash-predikat-2026">—</div>
+                      </div>
+                    </div>
+                    <div class="col-12">
+                      <div class="p-2 rounded-3" style="background:#fff7ed;">
+                        <div class="text-muted small mb-1">Akumulasi AK s.d. 2026</div>
+                        <div class="fw-bold fs-5" id="dash-akumulasi-2026">—</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="col-12">
-            <div class="p-2 rounded-3" style="background:#f0fdfe;">
-              <div class="text-muted small mb-1">Akumulasi AK s.d. 2024</div>
-              <div class="fw-bold fs-5" id="dash-akumulasi-2024">—</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Card 4: Kinerja 2023 -->
-  <div class="col-12 col-md-6 col-xl-4">
-    <div class="card border-0 shadow-sm h-100" style="border-radius:16px; border-top: 4px solid #7c3aed !important;">
-      <div class="card-body p-4">
-        <div class="d-flex align-items-center gap-2 mb-3">
-          <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:38px;height:38px;background:#f5f3ff;">
-            <i class="bi bi-calendar2-check-fill" style="color:#7c3aed;"></i>
-          </div>
-          <span class="fw-bold small text-uppercase" style="letter-spacing:0.5px; color:#7c3aed;">Periode 2023</span>
-        </div>
-        <div class="row g-2">
-          <div class="col-12">
-            <div class="p-2 rounded-3" style="background:#faf5ff;">
-              <div class="text-muted small mb-1">Predikat Kinerja 2023</div>
-              <div class="fw-bold fs-6" id="dash-predikat-2023">—</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Card 5: Data AK Awal (PALING BAWAH) -->
-  <div class="col-12 col-md-6 col-xl-4">
-    <div class="card border-0 shadow-sm h-100" style="border-radius:16px; border-top: 4px solid #2563eb !important;">
-      <div class="card-body p-4">
-        <div class="d-flex align-items-center gap-2 mb-3">
-          <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:38px;height:38px;background:#eff6ff;">
-            <i class="bi bi-file-earmark-text-fill text-primary"></i>
-          </div>
-          <span class="fw-bold small text-uppercase" style="letter-spacing:0.5px; color:#2563eb;">Data AK Awal</span>
-        </div>
-        <div class="row g-2">
-          <div class="col-6">
-            <div class="p-2 rounded-3" style="background:#f8fafc;">
-              <div class="text-muted small mb-1">AK Pengangkatan</div>
-              <div class="fw-bold fs-5" id="dash-ak-pengangkatan">—</div>
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="p-2 rounded-3" style="background:#f8fafc;">
-              <div class="text-muted small mb-1">AK Dasar</div>
-              <div class="fw-bold fs-5" id="dash-ak-dasar">—</div>
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="p-2 rounded-3" style="background:#f8fafc;">
-              <div class="text-muted small mb-1">AK dari DUPAK</div>
-              <div class="fw-bold fs-5" id="dash-ak-dupak">—</div>
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="p-2 rounded-3" style="background:#f8fafc;">
-              <div class="text-muted small mb-1">AK Integrasi s.d. 2022</div>
-              <div class="fw-bold fs-5" id="dash-ak-integrasi">—</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-</div><!-- end row -->
+          </div><!-- end row -->
       </section>
 
       <!-- PROFILE -->
@@ -279,7 +263,7 @@
           <h4 class="fw-800 mb-4">Daftar Pengguna</h4>
           <div class="table-responsive card border-0 shadow-sm">
               <table class="table mb-0">
-                  <thead class="table-light"><tr><th>Nama</th><th>Email</th><th>Role</th><th>Unit Kerja</th></tr></thead>
+                  <thead class="table-light"><tr><th>Nama</th><th>Email</th><th>Role</th></tr></thead>
                   <tbody id="userTableBody"></tbody>
               </table>
           </div>
@@ -298,10 +282,10 @@
         </div>
       </section>
 
-      <!-- PAGE: ENTRI DATA (USULAN AK) -->
-      <section id="page-entry" class="page-content" style="display:none">
-        <div class="container py-3" style="max-width: 770px;">
-            <form id="entryForm">
+      <!-- PAGE: FORM USULAN AK (Isi form lama Anda) -->
+<section id="page-entry-form" class="page-content" style="display:none">
+    <div class="container py-3" style="max-width: 770px;">
+        <form id="entryForm">
                 <div class="card border-0 shadow-sm mb-3 overflow-hidden" style="border-radius: 10px; border-top: 10px solid #673ab7 !important;">
                     <div class="card-body p-4 p-md-5">
                         <h4 class="fw-800 mb-3 mt-2">Usul AK PPBJ Bagian Pengadaan Barang/Jasa 2025</h4>
@@ -465,13 +449,39 @@
                     <button type="submit" id="btnSubmitForm" class="btn btn-primary px-5 fw-bold shadow-sm">Submit</button>
                 </div>
             </form>
-            <div id="entStatus" class="mb-5"></div>
+        <div id="entStatus" class="mb-5"></div>
+    </div>
+</section>
+
+<!-- PAGE: DRAF PENETAPAN AK (Halaman PDF) -->
+<section id="page-entry-pdf" class="page-content" style="display:none">
+    <div class="container py-3">
+        <div class="card border-0 shadow-sm h-100" style="border-radius: 20px; overflow: hidden; min-height: 85vh;">
+            <div class="card-header bg-primary text-white p-3 fw-bold d-flex align-items-center">
+                <i class="bi bi-file-earmark-pdf-fill me-2"></i> Draf Penetapan Angka Kredit
+            </div>
+            <div class="card-body p-0">
+                <!-- Iframe ini akan menampilkan PDF dari Google Drive -->
+                <iframe id="pdfViewer" src="" style="width: 100%; height: 80vh; border: none;"></iframe>
+                
+                <!-- Tampilan jika PDF tidak ada -->
+                <div id="pdfPlaceholder" class="text-center p-5 d-none">
+                    <i class="bi bi-file-earmark-x fs-1 text-muted"></i>
+                    <p class="text-muted mt-2">Dokumen PDF tidak ditemukan atau link tidak valid.</p>
+                </div>
+            </div>
         </div>
-      </section>
+    </div>
+</section>
+
+
+
+
+
+      
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
   <script src="assets/js/script.js"></script>
 </body>
-
 </html>

@@ -1,19 +1,20 @@
 /**
  * SCRIPT.JS - PROYEK PAK PBJ BPS 2026
- * Versi: Clean & Fixed
+ * Versi: Linear Flow & SubMenu Fixed
  */
 
 // ==========================================
 // 1. KONFIGURASI & DATA PENGGUNA
 // ==========================================
-const userData = JSON.parse(sessionStorage.getItem('userData')) || { role: 'User', name: 'Guest', email: '', picture: '', pbj: '' };
-const API_URL = "https://script.google.com/macros/s/AKfycbxtj9M4J2ApefCDnS76DS0NUQQojL_owOyAHxfKZwu07nCDbmO2KRC6zSSXyrHYFxpv/exec";
+// Tambahkan default pbj dan pdf agar tidak error saat pertama load
+const userData = JSON.parse(sessionStorage.getItem('userData')) || { role: 'User', name: 'Guest', email: '', picture: '', pbj: '', pdf: '' };
+const API_URL = "https://script.google.com/macros/s/AKfycbzURZqkWTE6rC_hadH3-ofZfeoT01t9WSzdhVuQb-BbIRRYdwhrGD_hEWJtFyhgb0HL/exec";
 
 let state = {
     role: sessionStorage.getItem('activeRole') || userData.role,
     lang: localStorage.getItem('lang') || 'id',
     theme: localStorage.getItem('theme') || 'light',
-    unitKerja: ''
+    unitKerja: '' // Akan diisi saat loadUserDataSelf
 };
 
 let allUsersData = []; 
@@ -72,6 +73,12 @@ const formatTanggal = (val) => {
     return val;
 };
 
+const pic = document.getElementById('userPic');
+if (userData.picture) {
+    pic.src = userData.picture;
+    pic.onerror = () => { pic.src = 'assets/img/default-avatar.png'; };
+}
+    
 // ==========================================
 // 3. KONFIGURASI KOLOM (MAPPING)
 // ==========================================
@@ -89,7 +96,7 @@ const customProfileFields = {
     ],
     experience: [
         { section: "Paket Konstruksi 2022-2024", fields: [{ idx: 2, label: "Seleksi" }, { idx: 3, label: "Tender" }, { idx: 4, label: "Pendampingan" }] },
-        { section: "Portofolio", fields: [{ idx: 5, label: "Portofolio Madya JK Tertentu" }] }
+        { section: "Portofolio", fields: [{ idx: 6, label: "Portofolio Madya JK" }] }
     ]
 };
 
@@ -106,11 +113,12 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEntryForm();
 });
 
-async function initApp() { 
+// FUNGSI UTAMA: Mengatur urutan Load Data -> Render -> Hilangkan Loading
+async function initApp() {
     applyTheme();
     
     try {
-        // 1. Load data user dulu (tunggu sampai selesai)
+        // 1. AMBIL DATA TERLEBIH DAHULU (AWAIT)
         if (state.role === 'Admin') {
             await loadUserDataSelf(); 
             fetchAllUsersAndBulkCache();
@@ -118,15 +126,25 @@ async function initApp() {
             await loadUserDataSelf();
         }
 
-        // 2. Setelah data didapat, BARU render sidebar & dashboard
+        // 2. ISI DATA DASHBOARD (Sambil masih loading screen)
+        renderDashboardCards();
+
+        // 3. RENDER SIDEBAR (state.unitKerja sudah terisi, jadi menu UKPBJ pasti muncul jika benar)
         renderSidebar();
         
+        // 4. UPDATE UI HEADER
         document.getElementById('welcomeText').innerText = `${t('welcome')}, ${userData.name}! 👋`;
         document.getElementById('topRoleBadge').innerText = state.role;
         document.getElementById('topRoleBadge').className = `badge-role ${state.role === 'Admin' ? 'admin-pill' : 'user-pill'}`;
         document.getElementById('langTop').value = state.lang;
         
-        if (userData.picture) document.getElementById('userPic').src = userData.picture;
+       if (userData.picture) {
+    const pic = document.getElementById('userPic');
+    pic.src = userData.picture;
+    pic.onerror = () => {
+        pic.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=16a34a&color=fff&rounded=true`;
+    };
+}
         
         if (state.role === 'Admin') {
             const rs = document.getElementById('roleSelect');
@@ -140,47 +158,37 @@ async function initApp() {
     } catch (error) {
         console.error("Init App Error:", error);
     } finally {
-        // 3. APA PUN YANG TERJADI (berhasil/gagal), hilangkan loading screen
+        // 5. HILANGKAN LOADING SCREEN PALING TERAKHIR
         hideLoading();
     }
 }
 
-
-
 async function loadUserDataSelf() {
-    // Set unit kerja dari data login yang sudah ada di sessionStorage
+    // Set unit kerja dari session login
     if (userData.pbj) {
         state.unitKerja = userData.pbj.toString().trim().toUpperCase();
     }
 
-    // Sisanya tetap sama (ambil profil pak, training, dll)
     if (!getCachedProfile(viewingEmail)) {
         try {
             const res = await fetch(`${API_URL}?action=getProfile&email=${viewingEmail}`);
             const result = await res.json();
             if (result.status === "success") {
                 setCachedProfile(viewingEmail, result.data);
-                renderDashboardCards();
             }
         } catch (e) { console.error("Failed to load self profile", e); }
-    } else {
-        renderDashboardCards();
     }
 }
 
 // ==========================================
 // 5. NAVIGATION & SIDEBAR
 // ==========================================
-// script.js
-// script.js
 function renderSidebar() {
     const menu = document.getElementById('sidebarMenu');
     if (!menu) return;
 
     const isAdmin = state.role === 'Admin';
-    const unit = state.unitKerja;
-    const canSeeUsulan = isAdmin || unit === 'UKPBJ';
-
+    const canSeeUsulan = isAdmin || state.unitKerja === 'UKPBJ';
 
     menu.innerHTML = `
         <a class="nav-link" id="nav-dashboard" onclick="showPage('dashboard')"><i class="bi bi-house-door-fill"></i> <span>${t('nav_dash')}</span></a>
@@ -197,7 +205,15 @@ function renderSidebar() {
         </div>
 
         ${canSeeUsulan ? `
-            <a class="nav-link" id="nav-entry" onclick="showPage('entry')"><i class="bi bi-plus-circle-fill"></i> <span>${t('nav_entry')}</span></a>
+            <div class="nav-item">
+                <a class="nav-link d-flex align-items-center" id="nav-entry" onclick="toggleSub('subEntry')">
+                    <i class="bi bi-plus-circle-fill"></i> <span>${t('nav_entry')}</span><i class="bi bi-chevron-down ms-auto small"></i>
+                </a>
+                <div id="subEntry" class="submenu shadow-sm" style="display:none">
+                    <a href="javascript:void(0)" onclick="showPage('entry-form')">Form Usulan AK</a>
+                    <a href="javascript:void(0)" onclick="showPage('entry-pdf')">Draf Penetapan AK</a>
+                </div>
+            </div>
         ` : ''}
 
         ${isAdmin ? `
@@ -208,18 +224,47 @@ function renderSidebar() {
     `;
 }
 
-
 function showPage(id) {
+    // 1. Sembunyikan semua halaman & tampilkan target
     document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
     const target = document.getElementById(`page-${id}`);
     if(target) target.style.display = 'block';
 
+    // 2. RESET HIGHLIGHT: Hilangkan semua class active dari menu utama dan submenu
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-    const activeNav = document.getElementById(`nav-${id}`);
-    if(activeNav) activeNav.classList.add('active');
+    document.querySelectorAll('.submenu a').forEach(a => a.classList.remove('active'));
 
-    if (id === 'entry') autoFillUsulanForm();
-    if (id === 'dashboard') {renderDashboardCards();}
+    // 3. LOGIKA HIGHLIGHT MENU UTAMA & SUBMENU
+    if (id === 'dashboard') {
+        document.getElementById('nav-dashboard')?.classList.add('active');
+    } 
+    else if (id === 'profile') {
+        document.getElementById('nav-profile')?.classList.add('active');
+    } 
+    else if (id.startsWith('entry-')) {
+        // Highlight Parent: Usulan AK
+        document.getElementById('nav-entry')?.classList.add('active');
+        
+        // Highlight Sub-menu spesifik berdasarkan ID halaman
+        if(id === 'entry-form') {
+            const link = Array.from(document.querySelectorAll('#subEntry a')).find(a => a.innerText.includes('Form Usulan AK'));
+            if(link) link.classList.add('active');
+        } else if(id === 'entry-pdf') {
+            const link = Array.from(document.querySelectorAll('#subEntry a')).find(a => a.innerText.includes('Draf Penetapan AK'));
+            if(link) link.classList.add('active');
+        }
+    } 
+    else {
+        // Untuk menu single seperti Analitik, Pengguna, Pengaturan
+        const activeNav = document.getElementById(`nav-${id}`);
+        if(activeNav) activeNav.classList.add('active');
+    }
+
+    // 4. TRIGGER FUNGSI HALAMAN (Tetap dipertahankan)
+    if (id === 'entry-form') autoFillUsulanForm();
+    if (id === 'entry-pdf') loadUserPDF(); 
+    if (id === 'dashboard') renderDashboardCards();
+    
     if(window.innerWidth < 992) document.body.classList.remove('sidebar-open');
 }
 
@@ -227,8 +272,6 @@ function showPage(id) {
 // 6. ADMIN & PROFILE LOGIC
 // ==========================================
 async function fetchAllUsersAndBulkCache() {
-    // Kita tetap melakukan fetch background untuk kecepatan (cache), 
-    // tapi kita tidak perlu lagi mengupdate dropdown UI.
     if (allUsersData.length === 0) {
         try {
             const res = await fetch(`${API_URL}?action=getAllUsers`);
@@ -259,19 +302,11 @@ async function fetchAllUsersAndBulkCache() {
 }
 
 function renderProfileSelectorIfAdmin() {
-    // 1. Cek apakah role aktif saat ini adalah Admin
-    // Jika Anda sedang simulasi jadi User, fungsi ini akan berhenti di sini (sesuai permintaan Anda)
-    if (state.role !== 'Admin') {
-        console.log("Selector disembunyikan karena role bukan Admin.");
-        return;
-    }
-
+    if (state.role !== 'Admin') return;
     const profileSection = document.getElementById('page-profile');
     if (!profileSection) return;
 
     let wrap = document.getElementById('profilePageSelector');
-
-    // 2. Jika wrapper belum ada di DOM, buat baru
     if (!wrap) {
         wrap = document.createElement('div');
         wrap.id = 'profilePageSelector';
@@ -288,22 +323,14 @@ function renderProfileSelectorIfAdmin() {
             </button>
         `;
         const detailArea = document.getElementById('profileDetailArea');
-        if (detailArea) {
-            profileSection.insertBefore(wrap, detailArea);
-        }
+        if (detailArea) profileSection.insertBefore(wrap, detailArea);
     }
 
-    // 3. Update isi dropdown (Options)
     const sel = document.getElementById('adminProfileSelect');
     if (!sel) return;
-
     if (allUsersData.length > 0) {
-        // Jika data user sudah ada
-        sel.innerHTML = allUsersData.map(u => 
-            `<option value="${u.email}" ${u.email === viewingEmail ? 'selected' : ''}>${u.nama}</option>`
-        ).join('');
+        sel.innerHTML = allUsersData.map(u => `<option value="${u.email}" ${u.email === viewingEmail ? 'selected' : ''}>${u.nama}</option>`).join('');
     } else {
-        // Jika data user belum selesai di-fetch, tampilkan loading/nama sendiri
         sel.innerHTML = `<option value="${userData.email}" selected>Memuat daftar user...</option>`;
     }
 }
@@ -311,7 +338,10 @@ function renderProfileSelectorIfAdmin() {
 async function loadProfileData(type) {
     showPage('profile');
     const area = document.getElementById('profileDetailArea');
+
     document.querySelectorAll('.submenu a').forEach(a => a.classList.remove('active'));
+    const subLink = document.getElementById(`sub-${type}`);
+    if(subLink) subLink.classList.add('active');
     document.getElementById(`sub-${type}`)?.classList.add('active');
     document.getElementById('nav-profile').classList.add('active');
 
@@ -335,26 +365,13 @@ function renderProfileUI(type) {
     const d = (specificData && specificData.values) ? specificData.values : [];
     const fieldsToShow = customProfileFields[type] || [];
 
-    let labelExtra = type === 'training' ? `
-    <div class="p-3 border-bottom">
-    <h5 class="fw-800 mb-0" style="font-size: 1.25rem; color: var(--text-main) !important;">
-    <i class="bi bi-award-fill me-2 text-success"></i>Keikutsertaan Pelatihan dan Uji Kompetensi
-    </h5>
-    </div>` : "";
+    let labelExtra = type === 'training' ? `<div class="p-3 border-bottom"><h6 class="fw-800 mb-0"><i class="bi bi-award-fill me-2 text-success"></i>Keikutsertaan Pelatihan dan Uji Kompetensi</h6></div>` : "";
 
-    let html = `
-        <div class="card border-0 shadow-sm overflow-hidden mb-4" style="border-radius:20px;">
-            <div class="card-header bg-primary text-white p-4 border-0">
-                <h5 class="mb-0 fw-bold text-uppercase">${t('sub_' + type)}</h5>
-                <small class="opacity-75">${viewingName}</small>
-            </div>
-            <div class="card-body p-0">${labelExtra}<div class="list-group list-group-flush">`;
+    let html = `<div class="card border-0 shadow-sm overflow-hidden mb-4" style="border-radius:20px;"><div class="card-header bg-primary text-white p-4 border-0"><h5 class="mb-0 fw-bold text-uppercase">${t('sub_' + type)}</h5><small class="opacity-75">${viewingName}</small></div><div class="card-body p-0">${labelExtra}<div class="list-group list-group-flush">`;
 
     fieldsToShow.forEach(item => {
         if (item.section) {
-            html += `<div class="bg-light p-2 px-3 fw-bold small text-primary border-bottom border-top" style="letter-spacing:1px; font-size: 16px;">
-                        <i class="bi bi-layers-fill me-1"></i> ${item.section.toUpperCase()}
-                     </div>`;
+            html += `<div class="bg-light p-2 px-3 fw-bold small text-primary border-bottom border-top" style="letter-spacing:1px; font-size: 11px;"><i class="bi bi-layers-fill me-1"></i> ${item.section.toUpperCase()}</div>`;
             item.fields.forEach(f => { html += renderRow(f.label, d[f.idx]); });
         } else {
             html += renderRow(item.label, d[item.idx]);
@@ -365,26 +382,20 @@ function renderProfileUI(type) {
 }
 
 function renderRow(label, value) {
-    return `<div class="list-group-item p-3 border-light border-0 border-bottom">
-                <div class="row align-items-center">
-                    <div class="col-5 text-muted fw-bold text-uppercase" style="font-size:13px; letter-spacing: 0.5px;">${label}</div>
-                    <div class="col-7 fw-bold" style="font-size:15px; color: var(--text-main)!important;">${formatTanggal(value)}</div>
-                </div>
-            </div>`;
+    return `<div class="list-group-item p-3 border-light border-0 border-bottom"><div class="row align-items-center"><div class="col-5 text-muted fw-bold text-uppercase" style="font-size:13px; letter-spacing: 0.5px;">${label}</div><div class="col-7 fw-bold" style="font-size:15px; color: var(--text-main)!important;">${formatTanggal(value)}</div></div></div>`;
 }
 
 function adminSwitchUser(email) {
     if (!email) return;
     const user = allUsersData.find(u => u.email === email) || { nama: userData.name, email };
-    viewingEmail = email;
-    viewingName = user.nama;
+    viewingEmail = email; viewingName = user.nama;
     const activeSub = document.querySelector('.submenu a.active');
     const activeType = activeSub ? activeSub.id.replace('sub-', '') : 'pak';
     loadProfileData(activeType);
 }
 
 // ==========================================
-// 7. ENTRY FORM LOGIC (FIXED REDUNDANCY)
+// 7. ENTRY FORM LOGIC
 // ==========================================
 function setupEntryForm() {
     const form = document.getElementById('entryForm');
@@ -396,50 +407,34 @@ function setupEntryForm() {
             e.preventDefault();
             const btn = document.getElementById('btnSubmitForm');
             const statusDiv = document.getElementById('entStatus');
-
-            // DATA SUBMIT: Gabungkan semua kolom (Termasuk yang kondisional)
             const dataToSubmit = [
-                new Date().toLocaleString('id-ID'),                                // A: Timestamp
-                userData.email,                                                   // B: Email
-                userData.name,                                                    // C: Nama
-                document.getElementById('entNip').value,                         // D: NIP
-                document.querySelector('input[name="entUbahPangkat"]:checked').value, // E: Perubahan Pangkat
-                document.getElementById('entLinkSkPangkat').value || "-",          // F: Link SK Pangkat
-                document.querySelector('input[name="entAdaAk"]:checked').value,    // G: Ada AK sd 2024
-                document.getElementById('entPredikat2023').value || "-",           // H: Predikat 2023
-                document.getElementById('entLink2023').value || "-",              // I: Link 2023
-                document.getElementById('entPredikat2024').value || "-",           // J: Predikat 2024
-                document.getElementById('entLink2024').value || "-",              // K: Link 2024
-                document.getElementById('entPredikat').value,                     // L: Predikat 2025
-                document.getElementById('entLinkFile').value                      // M: Link 2025
+                new Date().toLocaleString('id-ID'), userData.email, userData.name,
+                document.getElementById('entNip').value,
+                document.querySelector('input[name="entUbahPangkat"]:checked').value,
+                document.getElementById('entLinkSkPangkat').value || "-",
+                document.querySelector('input[name="entAdaAk"]:checked').value,
+                document.getElementById('entPredikat2023').value || "-",
+                document.getElementById('entLink2023').value || "-",
+                document.getElementById('entPredikat2024').value || "-",
+                document.getElementById('entLink2024').value || "-",
+                document.getElementById('entPredikat').value,
+                document.getElementById('entLinkFile').value
             ];
-
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
-
             try {
                 const encodedData = encodeURIComponent(JSON.stringify(dataToSubmit));
-                const res = await fetch(`${API_URL}?action=addEntry&sheet=Usulan+AK&data=${encodedData}`);
+                const res = await fetch(`${API_URL}?action=addEntry&email=${userData.email}&sheet=Usulan+AK&data=${encodedData}`);
                 const result = await res.json();
-
                 if (result.status === "success") {
                     statusDiv.innerHTML = `<div class="card border-0 shadow-sm p-5 text-center mt-3"><i class="bi bi-check-circle-fill fs-1 text-success mb-3"></i><h4>Sukses!</h4><p>Jawaban Anda telah direkam.</p><button onclick="location.reload()" class="btn btn-primary btn-sm px-4">Kirim Lainnya</button></div>`;
                     form.style.display = 'none';
-                } else {
-                    alert("Gagal: " + (result.message || "Terjadi kesalahan"));
-                }
-            } catch (err) { 
-                console.error(err);
-                alert("Error koneksi ke server."); 
-            } finally { 
-                btn.disabled = false; 
-                btn.innerHTML = 'Submit'; 
-            }
+                } else { alert("Gagal: " + (result.message || "Terjadi kesalahan")); }
+            } catch (err) { alert("Error koneksi ke server."); } finally { btn.disabled = false; btn.innerHTML = 'Submit'; }
         });
     }
 }
 
-// Conditional Form Helpers
 function togglePangkatConditional(val) {
     const area = document.getElementById('pangkatConditionalArea');
     const input = document.getElementById('entLinkSkPangkat');
@@ -452,7 +447,6 @@ function toggleConditionalQuestions(val) {
     const div = document.getElementById('conditionalQuestions');
     const isNeeded = (val === 'Belum ada');
     div.style.display = isNeeded ? 'block' : 'none';
-    
     ['entPredikat2023', 'entLink2023', 'entPredikat2024', 'entLink2024'].forEach(id => {
         document.getElementById(id).required = isNeeded;
     });
@@ -461,7 +455,6 @@ function toggleConditionalQuestions(val) {
 async function autoFillUsulanForm() {
     const inputNip = document.getElementById('entNip');
     if (!inputNip) return;
-
     const cached = getCachedProfile(userData.email);
     if (cached && cached.pak?.values) {
         inputNip.value = cached.pak.values[2] || "";
@@ -482,9 +475,8 @@ async function autoFillUsulanForm() {
 // ==========================================
 function handleSidebarToggle() { 
     const b = document.body; 
-    if (window.innerWidth < 992) {
-        b.classList.toggle('sidebar-open'); 
-    } else { 
+    if (window.innerWidth < 992) b.classList.toggle('sidebar-open'); 
+    else { 
         b.classList.toggle('collapsed-sidebar'); 
         localStorage.setItem('sidebarCollapsed', b.classList.contains('collapsed-sidebar')); 
     } 
@@ -505,16 +497,11 @@ function toggleTheme() { state.theme = state.theme === 'light' ? 'dark' : 'light
 function changeLang(v) { localStorage.setItem('lang', v); location.reload(); }
 function logout() { sessionStorage.clear(); window.location.href = 'login.html'; }
 function saveAdminSettings() { sessionStorage.setItem('activeRole', document.getElementById('roleSelect').value); location.reload(); }
-
 function checkSimulationStatus() {
     const btnBack = document.getElementById('btnBackToAdmin');
     if (btnBack) btnBack.style.display = (userData.role === 'Admin' && state.role === 'User') ? 'inline-block' : 'none';
 }
-
-function backToAdmin() {
-    sessionStorage.setItem('activeRole', 'Admin');
-    window.location.reload();
-}
+function backToAdmin() { sessionStorage.setItem('activeRole', 'Admin'); window.location.reload(); }
 
 async function fetchUsersToTable() {
     const tbody = document.getElementById('userTableBody');
@@ -522,93 +509,35 @@ async function fetchUsersToTable() {
     try {
         const res = await fetch(`${API_URL}?action=getAllUsers&email=${userData.email}`);
         const result = await res.json();
-        
         if (result.status === "success" && result.data) {
             const h = result.data[0];
-            
-            // 1. Cari index kolom secara dinamis agar jika urutan di sheet berubah, kode tetap jalan
             const namaIdx = h.indexOf('Nama');
             const emailIdx = h.indexOf('Email');
             const roleIdx = h.indexOf('Role');
             const unitIdx = h.indexOf('PBJ'); 
-
-            // 2. Mapping data ke dalam baris tabel
             tbody.innerHTML = result.data.slice(1).map(r => `
                 <tr>
                     <td><b>${r[namaIdx] || '-'}</b></td>
                     <td>${r[emailIdx] || '-'}</td>
-                    <td>
-                        <span class="badge-role ${r[roleIdx] === 'Admin' ? 'admin-pill' : 'user-pill'}">
-                            ${r[roleIdx] || '-'}
-                        </span>
-                    </td>
+                    <td><span class="badge-role ${r[roleIdx] === 'Admin' ? 'admin-pill' : 'user-pill'}">${r[roleIdx] || '-'}</span></td>
                     <td>${unitIdx !== -1 ? (r[unitIdx] || '-') : '-'}</td>
-                </tr>
-            `).join('');
+                </tr>`).join('');
         }
-    } catch (e) { 
-        console.error("Gagal fetch user ke tabel:", e);
-    }
+    } catch (e) { console.error("Gagal fetch user ke tabel:", e); }
 }
 
 function renderDashboardCards() {
     const profileData = getCachedProfile(userData.email);
-    if (!profileData) {
-        console.log("Dashboard: Data belum ada di cache, memulai fetching...");
-        loadUserDataSelf(); 
-        return;
-    }
-    
+    if (!profileData) return;
     const d = profileData.pak.values;
     const dashFields = { 
-        'dash-ak-pengangkatan': 23, 
-        'dash-ak-dasar': 24, 
-        'dash-ak-dupak': 25, 
-        'dash-ak-integrasi': 26, 
-        'dash-predikat-2023': 29,  
-        'dash-predikat-2024': 35, 
-        'dash-akumulasi-2024': 39, 
-        'dash-predikat-2025': 44, 
-        'dash-akumulasi-2025': 48,
-        'dash-masa-penilaian-2026': 52, 
-        'dash-predikat-2026': 53, 
-        'dash-konversi-2026': 56,
-        'dash-akumulasi-2026': 57 
+        'dash-ak-pengangkatan': 23, 'dash-ak-dasar': 24, 'dash-ak-dupak': 25, 'dash-ak-integrasi': 26, 
+        'dash-predikat-2023': 29, 'dash-konversi-2023': 32, 'dash-predikat-2024': 35, 'dash-akumulasi-2024': 39, 
+        'dash-predikat-2025': 44, 'dash-akumulasi-2025': 48, 'dash-predikat-2026': 53, 'dash-akumulasi-2026': 57 
     };
-
     for (const [elId, idx] of Object.entries(dashFields)) {
         const el = document.getElementById(elId);
-        if (el) {
-            let val = d[idx];
-
-            // 1. Logika Khusus untuk Label Masa Penilaian
-            if (elId === 'dash-masa-penilaian-2026') {
-                // Jika ada isinya, buat format: *Masa Penilaian 2026: Januari - Maret
-                // Jika kosong, jangan tampilkan apa-apa
-                el.textContent = val ? `*Masa Penilaian 2026: ${val}` : '';
-                continue; // Lanjut ke elemen berikutnya
-            }
-
-            // 1. Cek apakah data ada (tidak null, tidak undefined, tidak string kosong)
-            if (val !== null && val !== undefined && val !== '') {
-                
-                // 2. Jika datanya adalah angka, lakukan pembulatan 2 desimal
-                if (!isNaN(parseFloat(val))) {
-                    val = parseFloat(val).toFixed(2);
-                } 
-                // 3. Jika datanya adalah teks (seperti "Baik"), biarkan apa adanya
-                else {
-                    val = val.toString();
-                }
-
-            } else {
-                // 4. Jika data kosong, set ke strip
-                val = '—';
-            }
-
-            // 5. TAMPILKAN ke elemen (Baris ini harus di luar blok IF angka agar teks tetap muncul)
-            el.textContent = val;
-        }
+        if (el) el.textContent = d[idx] || '—';
     }
 }
 
@@ -619,12 +548,53 @@ function showAnalitikDev() {
 
 function toggleSub(id) {
     const el = document.getElementById(id);
+    // Hanya toggle menu yang diklik, tidak menutup menu lainnya
     el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function loadUserPDF() {
+    const viewer = document.getElementById('pdfViewer');
+    const placeholder = document.getElementById('pdfPlaceholder');
+    const pdfUrlRaw = userData.pdf;
+
+    if (pdfUrlRaw && pdfUrlRaw.includes('drive.google.com')) {
+        // Ekstrak file ID dari berbagai format URL Google Drive
+        const match = pdfUrlRaw.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+            const fileId = match[1];
+            const pdfUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+            viewer.src = pdfUrl;
+            viewer.style.display = 'block';
+            placeholder.classList.add('d-none');
+        } else {
+            // Fallback: URL drive tapi format tidak dikenali
+            viewer.style.display = 'none';
+            placeholder.classList.remove('d-none');
+        }
+    } else {
+        viewer.style.display = 'none';
+        placeholder.classList.remove('d-none');
+    }
 }
 
 function hideLoading() {
     const loader = document.getElementById('loading-screen');
-    if (loader) {
-        loader.classList.add('fade-out');
+    if (loader) loader.classList.add('fade-out');
+}
+
+function validateLink(inputId) {
+    const input = document.getElementById(inputId);
+    const errorDiv = document.getElementById(`error-${inputId}`);
+    if (!input) return;
+
+    const val = input.value;
+    const isValid = val.startsWith('http://') || val.startsWith('https://');
+
+    if (val !== "" && !isValid) {
+        if (errorDiv) errorDiv.style.display = 'block';
+        input.classList.add('is-invalid');
+    } else {
+        if (errorDiv) errorDiv.style.display = 'none';
+        input.classList.remove('is-invalid');
     }
 }

@@ -1,6 +1,6 @@
 // CONFIGURATION
 const GOOGLE_CLIENT_ID = "545994110940-n5dm8uc1beho1pn26giphg9b7ij3r7tl.apps.googleusercontent.com"; 
-const API_URL = "https://script.google.com/macros/s/AKfycbxtj9M4J2ApefCDnS76DS0NUQQojL_owOyAHxfKZwu07nCDbmO2KRC6zSSXyrHYFxpv/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzURZqkWTE6rC_hadH3-ofZfeoT01t9WSzdhVuQb-BbIRRYdwhrGD_hEWJtFyhgb0HL/exec";
 
 
 // Load Google Sign-In button
@@ -30,8 +30,9 @@ async function handleCredentialResponse(response) {
                 name: result.nama,
                 email: payload.email,
                 role: result.role,
-                picture: payload.picture,
-                pbj: result.pbj 
+                picture: payload.picture || '',
+                pbj: result.pbj,
+                pdf: result.pdf
             }));
             window.location.href = 'index.html';
         } else {
