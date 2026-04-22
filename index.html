@@ -7,6 +7,7 @@
     <script>
         if (sessionStorage.getItem('isLoggedIn') !== 'true') window.location.href = 'login.html';
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="icon" type="image/png" href="assets/img/logo.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
@@ -466,23 +467,64 @@
 </section>
 
 <!-- PAGE: DRAF PENETAPAN AK (Halaman PDF) -->
+<!-- Tambahkan di dalam <head> -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- Edit di bagian section #page-entry-pdf -->
+<!-- PAGE: DRAF PENETAPAN AK -->
 <section id="page-entry-pdf" class="page-content" style="display:none">
-    <div class="container py-3">
-        <div class="card border-0 shadow-sm h-100" style="border-radius: 20px; overflow: hidden; min-height: 85vh;">
-            <div class="card-header bg-primary text-white p-3 fw-bold d-flex align-items-center">
-                <i class="bi bi-file-earmark-pdf-fill me-2"></i> Draf Penetapan Angka Kredit
-            </div>
-            <div class="card-body p-0">
-                <!-- Iframe ini akan menampilkan PDF dari Google Drive -->
-                <iframe id="pdfViewer" src="" style="width: 100%; height: 80vh; border: none;"></iframe>
-                
-                <!-- Tampilan jika PDF tidak ada -->
-                <div id="pdfPlaceholder" class="text-center p-5 d-none">
-                    <i class="bi bi-file-earmark-x fs-1 text-muted"></i>
-                    <p class="text-muted mt-2">Dokumen PDF tidak ditemukan atau link tidak valid.</p>
+    <div class="container py-3" style="max-width: 900px;">
+        
+        <!-- Kartu Instruksi (Tetap) -->
+        <div id="verifInstruction" class="card border-0 shadow-sm mb-4" style="border-radius: 15px; border-left: 5px solid #0d6efd;">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-start gap-3">
+                    <i class="bi bi-info-circle-fill fs-3 text-primary"></i>
+                    <div>
+                        <h5 class="fw-bold mb-1">Verifikasi Dokumen</h5>
+                        <p class="text-muted mb-0">Silakan periksa draf dokumen di bawah ini. Klik tombol konfirmasi di bagian bawah setelah Anda selesai memeriksa.</p>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- Viewer PDF (Tetap) -->
+        <div class="card border-0 shadow-sm overflow-hidden mb-4" style="border-radius: 20px; min-height: 70vh;">
+            <div class="card-body p-0">
+                <iframe id="pdfViewer" src="" style="width: 100%; height: 75vh; border: none;"></iframe>
+            </div>
+        </div>
+
+        <!-- AREA TOMBOL VERIFIKASI -->
+        <div id="verifActionArea" class="mb-5">
+            <div class="d-flex justify-content-center gap-3">
+                <button id="btnSesuai" class="btn btn-success px-4 py-2 fw-bold shadow-sm rounded-pill" onclick="pilihVerifikasi('Sesuai')">
+                    <i class="bi bi-check-circle me-2"></i> Sudah Sesuai
+                </button>
+                <button id="btnBelumSesuai" class="btn btn-danger px-4 py-2 fw-bold shadow-sm rounded-pill" onclick="pilihVerifikasi('Belum Sesuai')">
+                    <i class="bi bi-x-circle me-2"></i> Belum Sesuai
+                </button>
+            </div>
+
+            <div id="verifCatatanArea" style="display:none;" class="mt-4 card border-0 shadow-sm p-4" style="border-radius:14px;">
+                <label class="form-label fw-bold mb-2 text-danger">Apa yang belum sesuai?</label>
+                <textarea id="verifCatatan" class="form-control mb-3" rows="3" placeholder="Tuliskan catatan perbaikan di sini..."></textarea>
+                <div class="d-flex gap-2 justify-content-end">
+                    <button class="btn btn-light btn-sm" onclick="batalVerifikasi()">Batal</button>
+                    <button id="btnKirimVerif" class="btn btn-danger btn-sm px-4 fw-bold" onclick="submitVerifikasi('Belum Sesuai')">Kirim Feedback</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AREA STATUS SUKSES / TERKUNCI (DISAMAKAN DENGAN FORM USULAN) -->
+        <div id="verifDoneArea" class="text-center mt-4 mb-5" style="display: none;">
+            <div class="card border-0 shadow-sm p-5 text-center" style="border-radius: 20px;">
+                <i class="bi bi-check-circle-fill fs-1 text-success mb-3"></i>
+                <h4 class="fw-800">Terima kasih!</h4>
+                <p class="text-muted">Respon verifikasi Anda telah berhasil kami rekam.<br>Silakan hubungi <b>Admin</b> jika memerlukan perubahan data.</p>
+            </div>
+        </div>
+
     </div>
 </section>
 

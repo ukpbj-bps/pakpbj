@@ -1,9 +1,7 @@
 // CONFIGURATION
-const GOOGLE_CLIENT_ID = "545994110940-n5dm8uc1beho1pn26giphg9b7ij3r7tl.apps.googleusercontent.com"; 
-const API_URL = "https://script.google.com/macros/s/AKfycbyfnISwKJILln5e3X_x4ykO8aNUrHz9T9U-KMDCHY01qTUY0l9l6M-Gq0bMfbggDoBT/exec";
+const GOOGLE_CLIENT_ID = "545994110940-n5dm8uc1beho1pn26giphg9b7ij3r7tl.apps.googleusercontent.com";
+const API_URL = "https://script.google.com/macros/s/AKfycbyrNYayEmkh4XMHCiRQ951Oz56atgA4bLgHqIvZpp7Vj9fXzDBqlmunpmUS7Lzevvg/exec";
 
-
-// Load Google Sign-In button
 window.onload = function () {
     google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
@@ -11,29 +9,20 @@ window.onload = function () {
     });
     google.accounts.id.renderButton(
         document.getElementById("buttonDiv"),
-        { theme: "outline", size: "large", width: "300" } 
+        { theme: "outline", size: "large", width: "300" }
     );
-
-   
 }
 
-// Handle login response
 async function handleCredentialResponse(response) {
-    // [SEC-1] Simpan raw idToken — dikirim ke backend untuk diverifikasi di sana
-    const idToken = response.credential;
-    const payload = decodeJwtResponse(idToken); // hanya untuk ambil nama/foto di frontend
- 
+    const payload = decodeJwtResponse(response.credential);
     document.getElementById('buttonDiv').innerHTML = '<div class="verifying-text">Memverifikasi...</div>';
- 
+
     try {
-        // [SEC-1] Kirim idToken ke backend, bukan hanya email
-        const res = await fetch(`${API_URL}?action=checkUser&idToken=${encodeURIComponent(idToken)}`);
+        const res    = await fetch(`${API_URL}?action=checkUser&email=${payload.email}`);
         const result = await res.json();
- 
+
         if (result.status === "success") {
-            // Simpan idToken di sessionStorage untuk dipakai request berikutnya
             sessionStorage.setItem('isLoggedIn', 'true');
-            sessionStorage.setItem('idToken', idToken);
             sessionStorage.setItem('userData', JSON.stringify({
                 name   : result.nama,
                 email  : payload.email,
@@ -59,17 +48,6 @@ function decodeJwtResponse(token) {
     return JSON.parse(decodeURIComponent(atob(base64).split('').map(c =>
         '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
     ).join('')));
-}
-
-function parseCSV(csv) {
-    const lines = csv.split('\n');
-    const headers = lines[0].replace(/"/g, '').split(',');
-    return lines.slice(1).map(line => {
-        const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-        let obj = {};
-        headers.forEach((h, i) => obj[h.trim()] = values[i]?.replace(/"/g, '').trim());
-        return obj;
-    });
 }
 
 function logout() {
