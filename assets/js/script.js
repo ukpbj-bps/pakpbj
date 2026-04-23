@@ -699,10 +699,12 @@ function renderDashboardCards() {
         if (el) {
             let val = d[idx] || '—';
 
-            
+            // Logika Pembulatan 2 Angka di Belakang Koma:
             if (val !== '—' && val !== '' && !isNaN(val)) {
+                // Hanya proses jika ID kartu mengandung kata kunci nilai (bukan predikat teks)
                 if (elId.includes('ak') || elId.includes('konversi') || elId.includes('akumulasi')) {
-                    val = Math.floor(Number(val));
+                    // toFixed(2) akan memaksa 2 digit desimal (contoh: 12 jadi 12.00)
+                    val = Number(val).toFixed(2);
                 }
             }
 
