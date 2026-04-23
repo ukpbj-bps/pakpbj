@@ -704,7 +704,7 @@ function renderDashboardCards() {
                 // Hanya proses jika ID kartu mengandung kata kunci nilai (bukan predikat teks)
                 if (elId.includes('ak') || elId.includes('konversi') || elId.includes('akumulasi')) {
                     // toFixed(2) akan memaksa 2 digit desimal (contoh: 12 jadi 12.00)
-                    val = Number(val).toFixed(2);
+                    val = Number(val).toFixed(3);
                 }
             }
 
