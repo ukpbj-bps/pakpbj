@@ -23,6 +23,7 @@ async function handleCredentialResponse(response) {
 
         if (result.status === "success") {
             sessionStorage.setItem('isLoggedIn', 'true');
+            sessionStorage.setItem('loginTime', Date.now()); // Simpan waktu login sekarang
             sessionStorage.setItem('userData', JSON.stringify({
                 name   : result.nama,
                 email  : payload.email,

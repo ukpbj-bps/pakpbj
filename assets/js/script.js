@@ -23,6 +23,33 @@ let viewingName = userData.name;
 
 const CACHE_KEY = 'profileCache_admin';
 
+// --- KONFIGURASI AUTO LOGOUT ---
+let activityTimer;
+const INACTIVITY_LIMIT = 30 * 60 * 1000; // Batas waktu: 30 Menit (dalam milidetik)
+
+function resetActivityTimer() {
+    // Hapus timer sebelumnya
+    clearTimeout(activityTimer);
+    
+    // Mulai timer baru
+    activityTimer = setTimeout(() => {
+        alert("Sesi Anda telah berakhir karena tidak ada aktivitas selama 30 menit. Silakan login kembali.");
+        logout(); // Memanggil fungsi logout yang sudah ada di script.js Anda
+    }, INACTIVITY_LIMIT);
+}
+
+function startInactivityTracker() {
+    // Daftarkan event yang dianggap sebagai "Aktivitas"
+    window.onmousemove = resetActivityTimer;   // Gerakan mouse
+    window.onmousedown = resetActivityTimer;   // Klik mouse
+    window.ontouchstart = resetActivityTimer;  // Sentuhan layar (HP)
+    window.onkeypress = resetActivityTimer;    // Menekan keyboard
+    window.onscroll = resetActivityTimer;      // Scroll halaman
+    
+    // Jalankan timer pertama kali
+    resetActivityTimer();
+}
+
 // ==========================================
 // 2. UTILS & CACHE SYSTEM
 // ==========================================
@@ -137,14 +164,17 @@ async function initApp() {
         document.getElementById('topRoleBadge').className = `badge-role ${state.role === 'Admin' ? 'admin-pill' : 'user-pill'}`;
         document.getElementById('langTop').value = state.lang;
         
-       if (userData.picture) {
-    const pic = document.getElementById('userPic');
-    pic.src = userData.picture;
-    pic.onerror = () => {
-        pic.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=16a34a&color=fff&rounded=true`;
-    };
-}
-        
+        if (userData.picture) {
+            const pic = document.getElementById('userPic');
+            pic.src = userData.picture;
+            pic.onerror = () => {
+                pic.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=16a34a&color=fff&rounded=true`;
+            };
+        }
+
+        // [TAMBAHAN] Mulai pelacakan aktivitas user untuk Auto Logout
+        startInactivityTracker();
+
         if (state.role === 'Admin') {
             const rs = document.getElementById('roleSelect');
             if(rs) rs.value = state.role;
@@ -157,7 +187,6 @@ async function initApp() {
     } catch (error) {
         console.error("Init App Error:", error);
     } finally {
-        // 5. HILANGKAN LOADING SCREEN PALING TERAKHIR
         hideLoading();
     }
 }
